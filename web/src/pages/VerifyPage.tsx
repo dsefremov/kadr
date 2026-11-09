@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { InvalidLink } from '../components/InvalidLink'
 import { Shell } from '../components/Shell'
 
 export function VerifyPage() {
@@ -34,15 +35,7 @@ export function VerifyPage() {
             </Link>
           </>
         )}
-        {status === 'invalid' && (
-          <>
-            <h1>Ссылка недействительна или устарела</h1>
-            <p className="note">Запросите новое письмо при входе или регистрации.</p>
-            <Link className="btn" to="/register">
-              Регистрация
-            </Link>
-          </>
-        )}
+        {status === 'invalid' && <InvalidLink />}
       </div>
     </Shell>
   )

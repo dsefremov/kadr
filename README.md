@@ -1,12 +1,12 @@
 # Кадр (Kadr)
 
-Private photo and video feed (memories.gallery-style). **Stage 1** adds accounts: register, email verification, login, transactional outbox, and a `send_email` worker backed by Mailpit in dev. **Stage 0** laid down Docker, migrations, media-runner smoke, and CI; upload and feed arrive in later stages.
+Private photo and video feed (memories.gallery-style). **Stage 2** completes auth (reset, rate limits, cleanup job), adds **tus** uploads with quota reserve, feed/timeline APIs, and upload UI. **Stage 1** added accounts and email queue; **media processing** is stage 4.
 
 ## Stack
 
 | Layer | Tech |
 |-------|------|
-| API / worker | Go 1.22 (`cmd/kadr` — `api`, `worker`, `migrate` one-shot in Compose) |
+| API / worker | Go 1.22 (`cmd/kadr` — `api`, `worker`, `migrate`, `admin create`) |
 | UI | React 19 + TypeScript (Vite) |
 | DB | MySQL 8.4 |
 | Media | `media-runner` — ffmpeg, libvips, libheif (isolated, `network_mode: none`) |
@@ -50,6 +50,7 @@ cd web && PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088 MAILPIT_URL=http://127.0.0.1
 - `fixtures/` — licensed/sample media for CI smoke
 - `docs/stage-0.md` — stage 0 report
 - `docs/stage-1.md` — stage 1 report
+- `docs/stage-2.md` — stage 2 report
 - `docs/resource-limits.md` — VPS memory/CPU budget
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch rules.

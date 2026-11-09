@@ -4,4 +4,5 @@ type Options struct {
 	PublicURL    string
 	CookieSecure bool
 	MailFrom     string
+	MediaDir     string
 }

@@ -10,9 +10,12 @@ import (
 )
 
 const (
-	KindSendEmail = "send_email"
-	LeaseDuration = 2 * time.Minute
-	MaxAttempts   = 5
+	KindSendEmail         = "send_email"
+	KindExpireUpload      = "expire_upload"
+	KindCleanupUnverified = "cleanup_unverified"
+	KindDerive            = "derive"
+	LeaseDuration         = 2 * time.Minute
+	MaxAttempts           = 5
 )
 
 type Job struct {
@@ -23,14 +26,30 @@ type Job struct {
 }
 
 func EnqueueTx(ctx context.Context, tx *sql.Tx, kind string, payload any, idemKey string) error {
+	return EnqueueTxAfter(ctx, tx, kind, payload, idemKey, time.Now())
+}
+
+func EnqueueAfter(ctx context.Context, db *sql.DB, kind string, payload any, idemKey string, runAfter time.Time) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO jobs (kind, payload, idem_key, state, run_after)
+		VALUES (?, ?, ?, 'pending', ?)
+		ON DUPLICATE KEY UPDATE id = id`, kind, body, idemKey, runAfter)
+	return err
+}
+
+func EnqueueTxAfter(ctx context.Context, tx *sql.Tx, kind string, payload any, idemKey string, runAfter time.Time) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO jobs (kind, payload, idem_key, state)
-		VALUES (?, ?, ?, 'pending')
-		ON DUPLICATE KEY UPDATE id = id`, kind, body, idemKey)
+		INSERT INTO jobs (kind, payload, idem_key, state, run_after)
+		VALUES (?, ?, ?, 'pending', ?)
+		ON DUPLICATE KEY UPDATE id = id`, kind, body, idemKey, runAfter)
 	return err
 }
 

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dsefremov/kadr/internal/admin"
 	"github.com/dsefremov/kadr/internal/api"
 	"github.com/dsefremov/kadr/internal/config"
 	"github.com/dsefremov/kadr/internal/db"
@@ -21,7 +22,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: kadr <api|worker|migrate>")
+		fmt.Fprintln(os.Stderr, "usage: kadr <api|worker|migrate|admin>")
 		os.Exit(2)
 	}
 	cmd := os.Args[1]
@@ -58,9 +59,33 @@ func main() {
 		}
 		log.Info("migrations applied")
 		return
+	case "admin":
+		if len(os.Args) < 3 || os.Args[2] != "create" {
+			fmt.Fprintln(os.Stderr, "usage: kadr admin create --email ADDR --password SECRET")
+			os.Exit(2)
+		}
+		email, pw := "", ""
+		for i := 3; i+1 < len(os.Args); i++ {
+			if os.Args[i] == "--email" {
+				email = os.Args[i+1]
+			}
+			if os.Args[i] == "--password" {
+				pw = os.Args[i+1]
+			}
+		}
+		if email == "" || pw == "" {
+			fmt.Fprintln(os.Stderr, "email and password required")
+			os.Exit(2)
+		}
+		if err := admin.Create(ctx, database, email, pw); err != nil {
+			log.Error("admin create", "err", err)
+			os.Exit(1)
+		}
+		log.Info("admin user ready", "email", email)
+		return
 	case "api":
 		srv := api.New(log, database, api.Options{
-			PublicURL: cfg.PublicURL, CookieSecure: cfg.CookieSecure, MailFrom: cfg.MailFrom,
+			PublicURL: cfg.PublicURL, CookieSecure: cfg.CookieSecure, MailFrom: cfg.MailFrom, MediaDir: cfg.MediaDir,
 		})
 		httpSrv := &http.Server{
 			Addr:              cfg.HTTPAddr,
@@ -80,7 +105,7 @@ func main() {
 		_ = httpSrv.Shutdown(shutdown)
 	case "worker":
 		smtp := &mail.SMTP{Host: cfg.SMTPHost, Port: cfg.SMTPPort, From: cfg.MailFrom}
-		w := worker.New(log, database, cfg.WorkerPoll, smtp, cfg.PublicURL)
+		w := worker.New(log, database, cfg.WorkerPoll, smtp, cfg.PublicURL, cfg.MediaDir)
 		if err := w.Run(ctx); err != nil && err != context.Canceled {
 			log.Error("worker", "err", err)
 			os.Exit(1)
