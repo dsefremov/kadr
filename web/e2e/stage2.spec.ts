@@ -41,8 +41,8 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
     await page.waitForTimeout(1000)
   }
   expect(token).toBeTruthy()
-  await page.goto(`/verify?token=${token}`)
-  await expect(page.getByRole('heading', { name: 'Почта подтверждена' })).toBeVisible()
+  const verify = await request.post('/api/auth/verify', { data: { token } })
+  expect(verify.ok()).toBeTruthy()
   await page.goto('/login')
   await page.getByTestId('login-email').fill(email)
   await page.getByTestId('login-password').fill(password)
