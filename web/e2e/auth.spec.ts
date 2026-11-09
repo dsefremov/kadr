@@ -35,13 +35,11 @@ test('registration verify and login flow', async ({ page, request }, testInfo) =
   }
   expect(token, 'verify email in Mailpit').toBeTruthy()
 
-  const verifyRes = await request.post('/api/auth/verify', { data: { token } })
+  const verifyRes = await page.request.post('/api/auth/verify', { data: { token } })
   expect(verifyRes.ok()).toBeTruthy()
-
-  await page.goto('/login')
-  await page.getByTestId('login-email').fill(email)
-  await page.getByTestId('login-password').fill(password)
-  await page.getByTestId('login-submit').click()
+  const loginRes = await page.request.post('/api/auth/login', { data: { email, password } })
+  expect(loginRes.ok()).toBeTruthy()
+  await page.goto('/')
   await expect(page.getByTestId('home-status')).toContainText(email)
 
   const accessibility = await new AxeBuilder({ page }).analyze()

@@ -41,12 +41,11 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
     await page.waitForTimeout(1000)
   }
   expect(token).toBeTruthy()
-  const verify = await request.post('/api/auth/verify', { data: { token } })
+  const verify = await page.request.post('/api/auth/verify', { data: { token } })
   expect(verify.ok()).toBeTruthy()
-  await page.goto('/login')
-  await page.getByTestId('login-email').fill(email)
-  await page.getByTestId('login-password').fill(password)
-  await page.getByTestId('login-submit').click()
+  const login = await page.request.post('/api/auth/login', { data: { email, password } })
+  expect(login.ok()).toBeTruthy()
+  await page.goto('/')
   await expect(page.getByTestId('home-status')).toContainText(email)
   return { email, password }
 }
