@@ -39,7 +39,7 @@ func Claim(ctx context.Context, db *sql.DB) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var j Job
 	var payload []byte

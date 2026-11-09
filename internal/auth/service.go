@@ -53,7 +53,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var userID int64
 	var verified sql.NullTime
@@ -160,7 +160,7 @@ func (s *Service) Verify(ctx context.Context, plain string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var tokenID int64
 	var userID int64
@@ -196,7 +196,7 @@ func (s *Service) ResendVerify(ctx context.Context, email string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var userID int64
 	var verified sql.NullTime
 	err = tx.QueryRowContext(ctx, `SELECT id, email_verified_at FROM users WHERE email = ?`, email).Scan(&userID, &verified)
