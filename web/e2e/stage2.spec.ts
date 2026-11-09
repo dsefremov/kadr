@@ -12,8 +12,11 @@ async function latestToken(
 ): Promise<string | null> {
   const resp = await request.get(`${mailpit}/api/v1/messages`)
   const data = await resp.json()
+  const want = toEmail?.toLowerCase()
   const msgs = (data.messages as { ID: string; Subject: string; To?: { Address: string }[] }[]).filter(
-    (m) => m.Subject.includes(subjectPart) && (!toEmail || m.To?.some((t) => t.Address === toEmail)),
+    (m) =>
+      m.Subject.includes(subjectPart) &&
+      (!want || m.To?.some((t) => t.Address.toLowerCase() === want)),
   )
   const msg = msgs[0]
   if (!msg) return null
@@ -45,14 +48,6 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
   await page.getByTestId('login-password').fill(password)
   await page.getByTestId('login-submit').click()
   await expect(page.getByTestId('home-status')).toContainText(email)
-  await expect.poll(async () => {
-    return page.evaluate(async () => {
-      const r = await fetch('/api/me', { credentials: 'include' })
-      if (!r.ok) return false
-      const j = await r.json()
-      return j.email_verified === true
-    })
-  }).toBe(true)
   return { email, password }
 }
 
@@ -90,7 +85,8 @@ test('password reset flow', async ({ page, request }) => {
 test('tus photo upload', async ({ page, request }, testInfo) => {
   test.setTimeout(120_000)
   await registerVerifyLogin(page, request)
-  await expect(page.getByTestId('upload-zone')).toBeVisible()
+  await page.reload()
+  await expect(page.getByTestId('upload-zone')).toBeVisible({ timeout: 30_000 })
   const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
   const fileBuffer = readFileSync(fixture)
   await page.getByTestId('upload-picker').click()

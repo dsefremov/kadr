@@ -64,7 +64,7 @@
 
 ## CI
 
-**CI run link:** https://github.com/dsefremov/kadr/actions/runs/42666589233 (PR #3, all jobs green)
+**CI run link:** *(see PR #3 checks after push)*
 
 ## Open questions
 
