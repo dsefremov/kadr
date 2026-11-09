@@ -1,0 +1,10 @@
+.git
+.github
+docs/stage-0/screenshots
+web/node_modules
+web/dist
+**/*_test.go
+**/testdata
+README.md
+*.md
+!deploy/**

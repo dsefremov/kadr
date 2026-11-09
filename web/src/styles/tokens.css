@@ -1,0 +1,28 @@
+/* Кадр — design tokens v0.1 (from mockups v0.2) */
+:root {
+  --paper: #f5f0e6;
+  --paper-2: #ece5d7;
+  --card: #fffdf8;
+  --ink: #1a1613;
+  --ink-2: #5b524a;
+  --ink-3: #8c8278;
+  --line: #ddd3c3;
+  --accent: #e2462b;
+  --accent-ink: #fff;
+  --accent-soft: #fbe3dc;
+  --amber: #e9a23b;
+  --ok: #2f7d5b;
+  --err: #b3261e;
+  --font: 'Onest', 'Golos Text', system-ui, sans-serif;
+  --display: 'Unbounded', 'Onest', sans-serif;
+  --r: 14px;
+  --rh: 210px;
+  --shadow: 0 18px 50px rgba(26, 22, 19, 0.18);
+}
+
+@media (max-width: 600px) {
+  :root {
+    --rh: 104px;
+    --r: 12px;
+  }
+}

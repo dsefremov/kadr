@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1
+FROM golang:1.22-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ARG VERSION=dev
+ARG COMMIT=none
+ARG BUILD_TIME=unknown
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w \
+  -X github.com/dsefremov/kadr/internal/version.Version=${VERSION} \
+  -X github.com/dsefremov/kadr/internal/version.Commit=${COMMIT} \
+  -X github.com/dsefremov/kadr/internal/version.BuildTime=${BUILD_TIME}" \
+  -o /out/kadr ./cmd/kadr
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && useradd -u 10001 -r -s /usr/sbin/nologin kadr
+WORKDIR /app
+COPY --from=build /out/kadr /app/kadr
+USER kadr
+ENTRYPOINT ["/app/kadr"]
