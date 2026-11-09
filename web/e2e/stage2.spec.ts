@@ -36,7 +36,7 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
   await page.getByTestId('register-submit').click()
   let token: string | null = null
   for (let i = 0; i < 30; i++) {
-    token = await latestToken(request, 'подтвердите')
+    token = await latestToken(request, 'подтвердите', email)
     if (token) break
     await page.waitForTimeout(1000)
   }
