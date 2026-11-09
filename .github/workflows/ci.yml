@@ -4,11 +4,11 @@ on:
   pull_request:
     branches: [develop, main]
   push:
-    branches: [grok_bot, develop]
+    branches: [develop]
 
-# push + pull_request on the same commit used to race and sometimes schedule only a subset of jobs.
+# grok_bot is validated via pull_request (PR #3); avoid duplicate push+PR runs on the same SHA.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
