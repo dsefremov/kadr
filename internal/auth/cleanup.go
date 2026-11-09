@@ -3,10 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"time"
 )
-
-const unverifiedMaxAge = 7 * 24 * time.Hour
 
 // CleanupUnverified deletes accounts with no verified email older than 7 days (spec §7).
 func CleanupUnverified(ctx context.Context, db *sql.DB) (int64, error) {

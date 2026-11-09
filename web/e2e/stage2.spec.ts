@@ -43,7 +43,7 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
 }
 
 test('password reset flow', async ({ page, request }) => {
-  const { email, password } = await registerVerifyLogin(page, request)
+  const { email } = await registerVerifyLogin(page, request)
   await page.goto('/forgot')
   await page.getByTestId('forgot-email').fill(email)
   await page.getByTestId('forgot-submit').click()
