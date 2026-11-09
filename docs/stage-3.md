@@ -11,14 +11,23 @@
 
 ## Screenshots (Playwright + axe, committed)
 
-Captured at **1440×900** and **390×844** in `docs/stage-3/screenshots/`.
+### Desktop (1440)
 
-| Screen | Desktop | Mobile |
-|--------|---------|--------|
-| Public visibility confirm | `public-confirm-desktop-1440.png` | `public-confirm-mobile-390.png` |
-| Home (public) | `home-public-desktop-1440.png` | `home-public-mobile-390.png` |
-| Upload progress | `upload-progress-desktop-1440.png` | `upload-progress-mobile-390.png` |
-| Upload complete | `upload-done-desktop-1440.png` | `upload-done-mobile-390.png` |
+| Screen | |
+|--------|---|
+| Public visibility confirm | ![Confirm desktop](screenshots/public-confirm-desktop-1440.png) |
+| Home (public) | ![Home public desktop](screenshots/home-public-desktop-1440.png) |
+| Upload progress | ![Progress desktop](screenshots/upload-progress-desktop-1440.png) |
+| Upload complete | ![Done desktop](screenshots/upload-done-desktop-1440.png) |
+
+### Mobile (390)
+
+| Screen | |
+|--------|---|
+| Public visibility confirm | ![Confirm mobile](screenshots/public-confirm-mobile-390.png) |
+| Home (public) | ![Home public mobile](screenshots/home-public-mobile-390.png) |
+| Upload progress | ![Progress mobile](screenshots/upload-progress-mobile-390.png) |
+| Upload complete | ![Done mobile](screenshots/upload-done-mobile-390.png) |
 
 ## Decisions made
 
@@ -33,20 +42,20 @@ Captured at **1440×900** and **390×844** in `docs/stage-3/screenshots/`.
 ## Known limitations
 
 - Resume still requires the same file bytes client-side (tus protocol).
-- No upload pause UI beyond network/tus retries (cancel via navigation not built).
+- No dedicated pause/cancel control in UI (tus retries on network errors).
 - Timeline remains empty until stage 4.
 
 ## Tests
 
-| Suite | Count (CI head _TBD_) |
-|-------|----------------------|
-| Go `-race` | _TBD_ |
+| Suite | Count (CI head `7f899c5`) |
+|-------|---------------------------|
+| Go `go test ./... -race` | **12** test functions, **10** packages with tests |
 | Vitest | **3** files / **3** tests |
-| Playwright + axe | _TBD_ |
+| Playwright + axe | **20** passed |
 
 ## CI
 
-**Green run:** _TBD_
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42692459906 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
 
 ## Open questions
 
