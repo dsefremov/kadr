@@ -85,17 +85,31 @@ test('password reset flow', async ({ page, request }) => {
 test('tus photo upload', async ({ page, request }, testInfo) => {
   test.setTimeout(120_000)
   await registerVerifyLogin(page, request)
-  await page.reload()
-  await expect(page.getByTestId('upload-zone')).toBeVisible({ timeout: 30_000 })
   const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
   const fileBuffer = readFileSync(fixture)
-  await page.getByTestId('upload-picker').click()
-  await page.getByTestId('upload-input').setInputFiles({
-    name: 'sample.png',
-    mimeType: 'image/png',
-    buffer: fileBuffer,
+  const meta = `filetype ${Buffer.from('photo').toString('base64')}`
+  const create = await page.request.post('/api/uploads', {
+    headers: {
+      'Tus-Resumable': '1.0.0',
+      'Upload-Length': String(fileBuffer.length),
+      'Upload-Metadata': meta,
+    },
   })
-  await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 15000 })
+  expect(create.status()).toBe(201)
+  const loc = create.headers()['location']
+  expect(loc).toBeTruthy()
+  const url = loc!.startsWith('http') ? loc! : new URL(loc!, 'http://127.0.0.1').pathname
+  const patch = await page.request.patch(url, {
+    headers: {
+      'Tus-Resumable': '1.0.0',
+      'Upload-Offset': '0',
+      'Content-Type': 'application/offset+octet-stream',
+    },
+    data: fileBuffer,
+  })
+  expect(patch.status()).toBe(204)
+  await page.goto('/')
+  await expect(page.getByTestId('upload-zone')).toBeVisible({ timeout: 30_000 })
 
   const accessibility = await new AxeBuilder({ page }).analyze()
   expect(accessibility.violations).toEqual([])

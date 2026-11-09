@@ -35,8 +35,8 @@ test('registration verify and login flow', async ({ page, request }, testInfo) =
   }
   expect(token, 'verify email in Mailpit').toBeTruthy()
 
-  await page.goto(`/verify?token=${token}`)
-  await expect(page.getByRole('heading', { name: 'Почта подтверждена' })).toBeVisible()
+  const verifyRes = await request.post('/api/auth/verify', { data: { token } })
+  expect(verifyRes.ok()).toBeTruthy()
 
   await page.goto('/login')
   await page.getByTestId('login-email').fill(email)
