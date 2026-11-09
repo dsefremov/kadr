@@ -27,6 +27,26 @@ services:
           memory: 512M
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.kadr
+    command: ['migrate']
+    environment:
+      KADR_MYSQL_DSN: ${KADR_MYSQL_DSN:-kadr:kadr-dev@tcp(mysql:3306)/kadr?parseTime=true&charset=utf8mb4&loc=UTC&timeout=5s&multiStatements=true}
+      KADR_LOG_LEVEL: ${KADR_LOG_LEVEL:-info}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
+    restart: 'no'
+
   api:
     build:
       context: .
@@ -41,9 +61,13 @@ services:
       KADR_HTTP_ADDR: ':8080'
       KADR_LOG_LEVEL: ${KADR_LOG_LEVEL:-info}
       KADR_LOG_FORMAT: json
+      KADR_PUBLIC_URL: ${KADR_PUBLIC_URL:-http://127.0.0.1:8088}
+      KADR_MAIL_FROM: ${KADR_MAIL_FROM:-noreply@kadr.local}
     volumes:
       - media_data:/data
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       mysql:
         condition: service_healthy
     ports:
@@ -73,11 +97,15 @@ services:
       KADR_WORKER_CONCURRENCY: '1'
       KADR_WORKER_POLL_INTERVAL: ${KADR_WORKER_POLL_INTERVAL:-5s}
       KADR_LOG_LEVEL: ${KADR_LOG_LEVEL:-info}
-      KADR_SMTP_HOST: mailpit
-      KADR_SMTP_PORT: '1025'
+      KADR_SMTP_HOST: ${KADR_SMTP_HOST:-mailpit}
+      KADR_SMTP_PORT: ${KADR_SMTP_PORT:-1025}
+      KADR_PUBLIC_URL: ${KADR_PUBLIC_URL:-http://127.0.0.1:8088}
+      KADR_MAIL_FROM: ${KADR_MAIL_FROM:-noreply@kadr.local}
     volumes:
       - media_data:/data
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       api:
         condition: service_healthy
     networks:
@@ -145,6 +173,7 @@ services:
       - dev
     ports:
       - '8025:8025'
+      - '1025:1025'
     networks:
       - internal
     deploy:

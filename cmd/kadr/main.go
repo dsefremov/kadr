@@ -14,6 +14,7 @@ import (
 	"github.com/dsefremov/kadr/internal/config"
 	"github.com/dsefremov/kadr/internal/db"
 	"github.com/dsefremov/kadr/internal/logx"
+	"github.com/dsefremov/kadr/internal/mail"
 	"github.com/dsefremov/kadr/internal/migrate"
 	"github.com/dsefremov/kadr/internal/worker"
 )
@@ -49,17 +50,18 @@ func main() {
 	}
 	defer database.Close()
 
-	if err := migrate.Up(ctx, database); err != nil {
-		log.Error("migrate", "err", err)
-		os.Exit(1)
-	}
-
 	switch cmd {
 	case "migrate":
+		if err := migrate.Up(ctx, database); err != nil {
+			log.Error("migrate", "err", err)
+			os.Exit(1)
+		}
 		log.Info("migrations applied")
 		return
 	case "api":
-		srv := api.New(log, database)
+		srv := api.New(log, database, api.Options{
+			PublicURL: cfg.PublicURL, CookieSecure: cfg.CookieSecure, MailFrom: cfg.MailFrom,
+		})
 		httpSrv := &http.Server{
 			Addr:              cfg.HTTPAddr,
 			Handler:           srv.Handler(),
@@ -77,7 +79,8 @@ func main() {
 		defer cancel()
 		_ = httpSrv.Shutdown(shutdown)
 	case "worker":
-		w := worker.New(log, database, cfg.WorkerPoll)
+		smtp := &mail.SMTP{Host: cfg.SMTPHost, Port: cfg.SMTPPort, From: cfg.MailFrom}
+		w := worker.New(log, database, cfg.WorkerPoll, smtp, cfg.PublicURL)
 		if err := w.Run(ctx); err != nil && err != context.Canceled {
 			log.Error("worker", "err", err)
 			os.Exit(1)

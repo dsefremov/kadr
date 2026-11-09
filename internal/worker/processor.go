@@ -1,0 +1,80 @@
+package worker
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+
+	"github.com/dsefremov/kadr/internal/jobs"
+	"github.com/dsefremov/kadr/internal/mail"
+)
+
+type Processor struct {
+	log     *slog.Logger
+	db      *sql.DB
+	smtp    *mail.SMTP
+	pubPath string
+}
+
+func NewProcessor(log *slog.Logger, db *sql.DB, smtp *mail.SMTP, publicURL string) *Processor {
+	return &Processor{log: log, db: db, smtp: smtp, pubPath: publicURL}
+}
+
+func (p *Processor) Process(ctx context.Context, j *jobs.Job) error {
+	switch j.Kind {
+	case jobs.KindSendEmail:
+		return p.sendEmail(ctx, j)
+	default:
+		p.log.Warn("unknown job kind", "kind", j.Kind)
+		return nil
+	}
+}
+
+func (p *Processor) sendEmail(ctx context.Context, j *jobs.Job) error {
+	var payload struct {
+		OutboxID int64 `json:"outbox_id"`
+	}
+	if err := json.Unmarshal(j.Payload, &payload); err != nil {
+		return err
+	}
+	var row mail.OutboxRow
+	err := p.db.QueryRowContext(ctx, `
+		SELECT id, event, payload FROM outbox WHERE id = ?`, payload.OutboxID).
+		Scan(&row.ID, &row.Event, &row.Payload)
+	if err != nil {
+		return err
+	}
+	to, subject, body, err := mail.RenderOutbox(row, p.pubPath)
+	if err != nil {
+		return err
+	}
+	if err := p.smtp.Send(ctx, to, subject, body); err != nil {
+		return err
+	}
+	_, err = p.db.ExecContext(ctx, `UPDATE outbox SET dispatched_at = NOW() WHERE id = ?`, row.ID)
+	return err
+}
+
+func (w *Worker) tick(ctx context.Context) {
+	job, err := jobs.Claim(ctx, w.db)
+	if err != nil {
+		w.log.Debug("claim", "err", err)
+		return
+	}
+	if job == nil {
+		return
+	}
+	proc := w.processor
+	if proc == nil {
+		return
+	}
+	err = proc.Process(ctx, job)
+	if err != nil {
+		w.log.Warn("job failed", "id", job.ID, "kind", job.Kind, "err", err)
+		_ = jobs.Fail(ctx, w.db, job.ID, fmt.Errorf("%w", err), job.Attempts)
+		return
+	}
+	_ = jobs.Complete(ctx, w.db, job.ID)
+}

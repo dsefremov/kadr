@@ -8,17 +8,28 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dsefremov/kadr/internal/auth"
 	"github.com/dsefremov/kadr/internal/db"
+	"github.com/dsefremov/kadr/internal/session"
 	"github.com/dsefremov/kadr/internal/version"
 )
 
 type Server struct {
-	log *slog.Logger
-	db  *sql.DB
+	log      *slog.Logger
+	db       *sql.DB
+	auth     *auth.Service
+	sessions *session.Store
+	opts     Options
 }
 
-func New(log *slog.Logger, database *sql.DB) *Server {
-	return &Server{log: log, db: database}
+func New(log *slog.Logger, database *sql.DB, opts Options) *Server {
+	return &Server{
+		log:      log,
+		db:       database,
+		auth:     &auth.Service{DB: database, PublicPath: opts.PublicURL},
+		sessions: &session.Store{DB: database},
+		opts:     opts,
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -26,6 +37,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /health", s.health)
 	mux.HandleFunc("GET /ready", s.ready)
 	mux.HandleFunc("GET /api/health", s.apiHealth)
+	s.registerAuthRoutes(mux)
 	return mux
 }
 

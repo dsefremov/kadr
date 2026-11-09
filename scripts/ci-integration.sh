@@ -14,12 +14,21 @@ docker compose build
 docker compose up -d mysql mailpit
 docker compose up -d --wait mysql
 
+GW=""
 if ! docker run --rm --network kadr_internal alpine:3.20 nc -zv -w 3 mysql 3306 >/dev/null 2>&1; then
   GW="$(docker network inspect kadr_internal -f '{{(index .IPAM.Config 0).Gateway}}')"
   echo "mysql hostname unreachable from network; using bridge gateway ${GW}:3306"
   export KADR_MYSQL_DSN="kadr:kadr-dev@tcp(${GW}:3306)/kadr?parseTime=true&charset=utf8mb4&loc=UTC&timeout=5s&multiStatements=true"
 fi
 
+if [ -n "${GW}" ] || ! docker run --rm --network kadr_internal alpine:3.20 nc -zv -w 3 mailpit 1025 >/dev/null 2>&1; then
+  GW="${GW:-$(docker network inspect kadr_internal -f '{{(index .IPAM.Config 0).Gateway}}')}"
+  echo "mailpit hostname unreachable from network; using bridge gateway ${GW}:1025 for SMTP"
+  export KADR_SMTP_HOST="${GW}"
+  export KADR_SMTP_PORT=1025
+fi
+
+docker compose run --rm migrate
 docker compose up -d api worker proxy
 
 API_PORT=8080
@@ -41,6 +50,11 @@ if [ "$ready" -ne 1 ]; then
 fi
 
 curl -fsS "http://127.0.0.1:${API_PORT}/api/health" | tee /tmp/kadr-api-health.json
+
+echo "Auth register smoke..."
+curl -fsS -X POST "http://127.0.0.1:${API_PORT}/api/auth/register" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ci-smoke@example.test","password":"longpassword99"}' | tee /tmp/kadr-register.json
 
 if curl -fsS "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
   echo "reverse proxy ok on :${PORT}"

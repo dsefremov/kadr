@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -30,11 +31,24 @@ func Ping(ctx context.Context, db *sql.DB) error {
 	return db.PingContext(ctx)
 }
 
+const RequiredSchemaVersion int64 = 2
+
 func MigrationApplied(ctx context.Context, db *sql.DB) (bool, error) {
 	var n int
-	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations WHERE version = 1`).Scan(&n)
+	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations WHERE version = ?`, RequiredSchemaVersion).Scan(&n)
 	if err != nil {
+		if isMissingTable(err) {
+			return false, nil
+		}
 		return false, err
 	}
 	return n > 0, nil
+}
+
+func isMissingTable(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "1146") || strings.Contains(msg, "doesn't exist")
 }
