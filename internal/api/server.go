@@ -11,6 +11,7 @@ import (
 	"github.com/dsefremov/kadr/internal/auth"
 	"github.com/dsefremov/kadr/internal/db"
 	"github.com/dsefremov/kadr/internal/session"
+	"github.com/dsefremov/kadr/internal/upload"
 	"github.com/dsefremov/kadr/internal/version"
 )
 
@@ -19,6 +20,7 @@ type Server struct {
 	db       *sql.DB
 	auth     *auth.Service
 	sessions *session.Store
+	uploads  *upload.Service
 	opts     Options
 }
 
@@ -28,6 +30,7 @@ func New(log *slog.Logger, database *sql.DB, opts Options) *Server {
 		db:       database,
 		auth:     &auth.Service{DB: database, PublicPath: opts.PublicURL},
 		sessions: &session.Store{DB: database},
+		uploads:  &upload.Service{DB: database, RootDir: opts.MediaDir, PublicURL: opts.PublicURL},
 		opts:     opts,
 	}
 }
@@ -38,6 +41,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /ready", s.ready)
 	mux.HandleFunc("GET /api/health", s.apiHealth)
 	s.registerAuthRoutes(mux)
+	s.registerFeedRoutes(mux)
+	s.registerUploadRoutes(mux)
 	return mux
 }
 

@@ -4,10 +4,18 @@ on:
   pull_request:
     branches: [develop, main]
   push:
-    branches: [grok_bot, develop]
+    branches: [develop]
+
+# grok_bot is validated via pull_request (PR #3); avoid duplicate push+PR runs on the same SHA.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  go:
+  go-backend:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +63,7 @@ jobs:
 
   docker-integration:
     runs-on: ubuntu-24.04
-    needs: [go, web]
+    needs: [go-backend, web]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -90,8 +98,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: stage-1-screenshots
-          path: docs/stage-1/screenshots/*.png
+          name: stage-2-screenshots
+          path: docs/stage-2/screenshots/*.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:

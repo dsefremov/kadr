@@ -7,29 +7,63 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/dsefremov/kadr/internal/auth"
 	"github.com/dsefremov/kadr/internal/jobs"
 	"github.com/dsefremov/kadr/internal/mail"
+	"github.com/dsefremov/kadr/internal/upload"
 )
 
 type Processor struct {
-	log     *slog.Logger
-	db      *sql.DB
-	smtp    *mail.SMTP
-	pubPath string
+	log      *slog.Logger
+	db       *sql.DB
+	smtp     *mail.SMTP
+	pubPath  string
+	uploads  *upload.Service
 }
 
-func NewProcessor(log *slog.Logger, db *sql.DB, smtp *mail.SMTP, publicURL string) *Processor {
-	return &Processor{log: log, db: db, smtp: smtp, pubPath: publicURL}
+func NewProcessor(log *slog.Logger, db *sql.DB, smtp *mail.SMTP, publicURL, mediaDir string) *Processor {
+	return &Processor{
+		log: log, db: db, smtp: smtp, pubPath: publicURL,
+		uploads: &upload.Service{DB: db, RootDir: mediaDir, PublicURL: publicURL},
+	}
 }
 
 func (p *Processor) Process(ctx context.Context, j *jobs.Job) error {
 	switch j.Kind {
 	case jobs.KindSendEmail:
 		return p.sendEmail(ctx, j)
+	case jobs.KindExpireUpload:
+		return p.expireUpload(ctx, j)
+	case jobs.KindCleanupUnverified:
+		return p.cleanupUnverified(ctx)
+	case jobs.KindDerive:
+		p.log.Info("derive job queued (media pipeline stage 4)", "id", j.ID)
+		return nil
 	default:
 		p.log.Warn("unknown job kind", "kind", j.Kind)
 		return nil
 	}
+}
+
+func (p *Processor) expireUpload(ctx context.Context, j *jobs.Job) error {
+	var payload struct {
+		UploadID int64 `json:"upload_id"`
+	}
+	if err := json.Unmarshal(j.Payload, &payload); err != nil {
+		return err
+	}
+	return p.uploads.ExpireByID(ctx, payload.UploadID)
+}
+
+func (p *Processor) cleanupUnverified(ctx context.Context) error {
+	n, err := auth.CleanupUnverified(ctx, p.db)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		p.log.Info("cleanup_unverified", "deleted", n)
+	}
+	return nil
 }
 
 func (p *Processor) sendEmail(ctx context.Context, j *jobs.Job) error {

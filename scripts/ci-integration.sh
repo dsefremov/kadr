@@ -30,6 +30,8 @@ fi
 
 docker compose run --rm migrate
 docker compose up -d api worker proxy
+# api/worker run as uid 10001; fresh named volumes are root-owned.
+docker compose exec -T -u root api sh -c 'chown -R 10001:10001 /data'
 
 API_PORT=8080
 PORT="${KADR_HTTP_PORT:-8088}"

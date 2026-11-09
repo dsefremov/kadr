@@ -64,6 +64,9 @@ export function LoginPage() {
           </button>
         </form>
         <p className="note" style={{ marginTop: 16 }}>
+          <Link to="/forgot">Забыли пароль?</Link>
+        </p>
+        <p className="note">
           Нет аккаунта? <Link to="/register">Регистрация</Link>
         </p>
       </div>

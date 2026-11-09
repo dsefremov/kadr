@@ -11,7 +11,7 @@ test('placeholder page renders', async ({ page }, testInfo) => {
 
   const slug = testInfo.project.name
   await page.screenshot({
-    path: `../docs/stage-1/screenshots/placeholder-${slug}.png`,
+    path: `../docs/stage-2/screenshots/placeholder-${slug}.png`,
     fullPage: true,
   })
 })
