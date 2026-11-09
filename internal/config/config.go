@@ -17,8 +17,11 @@ type Config struct {
 	WorkerPoll  time.Duration
 	WorkerJobs  int
 	MediaDir    string
-	SMTPHost    string
-	SMTPPort    int
+	SMTPHost      string
+	SMTPPort      int
+	MailFrom      string
+	PublicURL     string
+	CookieSecure  bool
 }
 
 func Load(service string) (Config, error) {
@@ -31,8 +34,11 @@ func Load(service string) (Config, error) {
 		WorkerPoll: durationEnv("KADR_WORKER_POLL_INTERVAL", 5*time.Second),
 		WorkerJobs: intEnv("KADR_WORKER_CONCURRENCY", 1),
 		MediaDir:   envOr("KADR_MEDIA_DIR", "/data"),
-		SMTPHost:   envOr("KADR_SMTP_HOST", ""),
-		SMTPPort:   intEnv("KADR_SMTP_PORT", 1025),
+		SMTPHost:     envOr("KADR_SMTP_HOST", ""),
+		SMTPPort:     intEnv("KADR_SMTP_PORT", 1025),
+		MailFrom:     envOr("KADR_MAIL_FROM", "noreply@kadr.local"),
+		PublicURL:    envOr("KADR_PUBLIC_URL", "http://127.0.0.1:8088"),
+		CookieSecure: os.Getenv("KADR_COOKIE_SECURE") == "1",
 	}
 	if cfg.WorkerJobs < 1 {
 		cfg.WorkerJobs = 1

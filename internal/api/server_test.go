@@ -9,7 +9,7 @@ import (
 )
 
 func TestHealth(t *testing.T) {
-	s := New(slog.Default(), nil)
+	s := New(slog.Default(), nil, Options{})
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
 	s.health(rr, req)

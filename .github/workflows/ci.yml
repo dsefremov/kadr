@@ -74,6 +74,7 @@ jobs:
       - name: Playwright + axe
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:8088
+          MAILPIT_URL: http://127.0.0.1:8025
         run: |
           docker compose ps
           cd web
@@ -89,8 +90,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: stage-0-screenshots
-          path: docs/stage-0/screenshots/*.png
+          name: stage-1-screenshots
+          path: docs/stage-1/screenshots/*.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
