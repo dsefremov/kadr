@@ -74,7 +74,7 @@ cd web && npm run test && PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088 MAILPIT_URL=
 
 Workflow: `.github/workflows/ci.yml` (push `grok_bot` / PR to `develop`).
 
-**CI run link:** *(filled after PR push — see PR checks)*
+**CI run link:** https://github.com/dsefremov/kadr/actions/runs/42654946904 (PR #2, all jobs green)
 
 ## Open questions
 
