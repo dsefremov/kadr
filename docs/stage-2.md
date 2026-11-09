@@ -74,7 +74,7 @@ Captured in CI (`web/e2e/screenshots.spec.ts`) at **1440×900** and **390×844**
 
 ## Tests
 
-| Suite | Count (CI head `41b8770`) |
+| Suite | Count (CI head `1939af8`) |
 |-------|---------------------------|
 | Go `go test ./... -race` | **11** test functions, **9** packages with tests |
 | Vitest | **2** files / **2** tests |
@@ -82,7 +82,7 @@ Captured in CI (`web/e2e/screenshots.spec.ts`) at **1440×900** and **390×844**
 
 ## CI
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42680716345 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42681759095 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
 
 ## Open questions
 
