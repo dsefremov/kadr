@@ -44,7 +44,7 @@ jobs:
         working-directory: web
       - run: npm run typecheck
         working-directory: web
-      - run: npm run test 2>&1 | tee web/vitest.log
+      - run: npm run test 2>&1 | tee vitest.log
         working-directory: web
       - run: npm run build
         working-directory: web
