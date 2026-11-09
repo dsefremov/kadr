@@ -64,7 +64,7 @@
 
 ## CI
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42678001010 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42678804442 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
 
 ## Open questions
 
