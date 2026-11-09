@@ -47,15 +47,15 @@
 
 ## Tests
 
-| Suite | Count (CI head `7f899c5`) |
-|-------|---------------------------|
+| Suite | Count (final head `6dda011`) |
+|-------|--------------------------------|
 | Go `go test ./... -race` | **12** test functions, **10** packages with tests |
 | Vitest | **3** files / **3** tests |
 | Playwright + axe | **20** passed |
 
 ## CI
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42692459906 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42693437265 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
 
 ## Open questions
 
