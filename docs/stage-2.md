@@ -20,14 +20,29 @@
 
 **Not stage 2:** `derive`/media-runner (stage 4), admin APIs, trash/timeline media, stage 3 features.
 
-## Screenshots (Playwright + axe)
+## Screenshots (Playwright + axe, committed)
 
-| Viewport | Placeholder / home |
-|----------|-------------------|
-| Desktop 1440 | `docs/stage-2/screenshots/placeholder-desktop-1440.png`, `home-desktop-1440.png` |
-| Mobile 390 | `docs/stage-2/screenshots/placeholder-mobile-390.png`, `home-mobile-390.png` |
+Captured in CI (`web/e2e/screenshots.spec.ts`) at **1440×900** and **390×844**.
 
-*(Generated in CI / local Playwright after stack up.)*
+### Desktop (1440)
+
+| Screen | |
+|--------|---|
+| Home — upload zone + visibility | ![Home desktop](screenshots/home-desktop-1440.png) |
+| Upload accepted (tus) | ![Upload done desktop](screenshots/upload-done-desktop-1440.png) |
+| `/forgot` | ![Forgot desktop](screenshots/forgot-desktop-1440.png) |
+| `/reset` (new password form) | ![Reset desktop](screenshots/reset-desktop-1440.png) |
+| «Ссылка недействительна» | ![Invalid link desktop](screenshots/invalid-link-desktop-1440.png) |
+
+### Mobile (390)
+
+| Screen | |
+|--------|---|
+| Home — upload zone + visibility | ![Home mobile](screenshots/home-mobile-390.png) |
+| Upload accepted (tus) | ![Upload done mobile](screenshots/upload-done-mobile-390.png) |
+| `/forgot` | ![Forgot mobile](screenshots/forgot-mobile-390.png) |
+| `/reset` | ![Reset mobile](screenshots/reset-mobile-390.png) |
+| «Ссылка недействительна» | ![Invalid link mobile](screenshots/invalid-link-mobile-390.png) |
 
 ## Stage 9 notes (unchanged)
 
@@ -45,6 +60,9 @@
 | `derive` jobs | Acknowledged in worker; pipeline in stage 4 |
 | Accent / argon2 | Keep stage 1 values (#c73e22, 19 MiB) |
 | Schema version | **3** required for readiness |
+| Transparent PNG | Flatten onto **white** in processing (no consent endpoint; Den) |
+| Animated images | **Rejected** at ingest (Den) |
+| Video duration | **60 min** cap (Den) |
 
 ## Known limitations
 
@@ -56,19 +74,21 @@
 
 ## Tests
 
-| Suite | Count (CI head `8b314b8`) |
+| Suite | Count (CI head `41b8770`) |
 |-------|---------------------------|
 | Go `go test ./... -race` | **11** test functions, **9** packages with tests |
 | Vitest | **2** files / **2** tests |
-| Playwright + axe | **8** passed (2 projects × auth, placeholder, password reset, tus upload) |
+| Playwright + axe | **14** passed (2 viewports × auth, placeholder, stage2 flows, screenshot suite) |
 
 ## CI
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42678804442 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42680716345 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
 
 ## Open questions
 
 1. Confirmation dialog copy for public visibility (spec §13)?
-2. Flatten-consent endpoint for transparent PNG (spec §17)?
-3. Video duration cap (60 min proposal) — awaiting Den?
-4. When to add full tus-js-client with resume UX on mobile?
+2. When to add full tus-js-client with resume UX on mobile?
+3. Production `KADR_PUBLIC_URL` / email link format before release?
+4. Login rate limits at scale (app middleware vs reverse proxy)?
+5. Admin bootstrap beyond CLI (runbook only)?
+6. Argon2id 19 MiB revisit in stage 9 (scheduled; unchanged until then)?
