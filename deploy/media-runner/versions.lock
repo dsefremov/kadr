@@ -1,0 +1,4 @@
+# Target pins for Kadr stage 0 (Debian bookworm). Actual dpkg versions are printed at smoke time.
+ffmpeg=5.1.x
+libvips-tools=8.14.x
+libheif=1.15.x

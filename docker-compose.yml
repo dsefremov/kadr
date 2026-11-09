@@ -1,0 +1,167 @@
+name: kadr
+
+services:
+  mysql:
+    image: mysql:8.4
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${KADR_MYSQL_ROOT_PASSWORD:-kadr-root-dev}
+      MYSQL_DATABASE: ${KADR_MYSQL_DATABASE:-kadr}
+      MYSQL_USER: ${KADR_MYSQL_USER:-kadr}
+      MYSQL_PASSWORD: ${KADR_MYSQL_PASSWORD:-kadr-dev}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-u', 'root', '-pkadr-root-dev']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.35'
+          memory: 512M
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.kadr
+      args:
+        VERSION: ${KADR_VERSION:-stage0}
+        COMMIT: ${KADR_COMMIT:-local}
+        BUILD_TIME: ${KADR_BUILD_TIME:-local}
+    command: ['api']
+    environment:
+      KADR_MYSQL_DSN: ${KADR_MYSQL_DSN:-kadr:kadr-dev@tcp(mysql:3306)/kadr?parseTime=true&charset=utf8mb4&loc=UTC&timeout=5s&multiStatements=true}
+      KADR_HTTP_ADDR: ':8080'
+      KADR_LOG_LEVEL: ${KADR_LOG_LEVEL:-info}
+      KADR_LOG_FORMAT: json
+    volumes:
+      - media_data:/data
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - '8080:8080'
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O- http://127.0.0.1:8080/health >/dev/null || exit 1']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.kadr
+    command: ['worker']
+    environment:
+      KADR_MYSQL_DSN: ${KADR_MYSQL_DSN:-kadr:kadr-dev@tcp(mysql:3306)/kadr?parseTime=true&charset=utf8mb4&loc=UTC&timeout=5s&multiStatements=true}
+      KADR_WORKER_CONCURRENCY: '1'
+      KADR_WORKER_POLL_INTERVAL: ${KADR_WORKER_POLL_INTERVAL:-5s}
+      KADR_LOG_LEVEL: ${KADR_LOG_LEVEL:-info}
+      KADR_SMTP_HOST: mailpit
+      KADR_SMTP_PORT: '1025'
+    volumes:
+      - media_data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'kill -0 1']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.15'
+          memory: 128M
+    restart: unless-stopped
+
+  media-runner:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.media-runner
+    network_mode: 'none'
+    volumes:
+      - ./fixtures:/fixtures:ro
+      - media_spool:/spool
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 768M
+    restart: unless-stopped
+
+  proxy:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.proxy
+    ports:
+      - '${KADR_HTTP_PORT:-8088}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:8080/health >/dev/null']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    profiles:
+      - dev
+    ports:
+      - '8025:8025'
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.05'
+          memory: 64M
+    restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    name: kadr_mysql_data
+  media_data:
+    name: kadr_media_data
+  media_spool:
+    name: kadr_media_spool
