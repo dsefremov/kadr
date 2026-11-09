@@ -64,7 +64,7 @@
 
 ## CI
 
-**CI run link:** *(see PR #3 checks after push)*
+**CI run link:** https://github.com/dsefremov/kadr/pull/3/checks (target: all jobs green on head `0a4e1f2`)
 
 ## Open questions
 
