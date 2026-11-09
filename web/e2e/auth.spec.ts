@@ -21,7 +21,7 @@ async function latestVerifyToken(request: APIRequestContext, toEmail: string): P
   return match ? match[1] : null
 }
 
-test('registration verify and login flow', async ({ page, request }, testInfo) => {
+test('registration verify and login flow', async ({ page, request }) => {
   test.setTimeout(90_000)
   const email = `user-${Date.now()}@example.test`
   const password = 'longpassword1'
@@ -49,10 +49,4 @@ test('registration verify and login flow', async ({ page, request }, testInfo) =
 
   const accessibility = await new AxeBuilder({ page }).analyze()
   expect(accessibility.violations).toEqual([])
-
-  const slug = testInfo.project.name
-  await page.screenshot({
-    path: `../docs/stage-2/screenshots/auth-${slug}.png`,
-    fullPage: true,
-  })
 })
