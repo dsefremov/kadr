@@ -94,7 +94,7 @@ test('tus photo upload', async ({ page, request }, testInfo) => {
       'Upload-Metadata': meta,
     },
   })
-  expect(create.status()).toBe(201)
+  expect(create.status(), await create.text()).toBe(201)
   const loc = create.headers()['location']
   expect(loc).toBeTruthy()
   const url = loc!.startsWith('http') ? loc! : new URL(loc!, 'http://127.0.0.1').pathname

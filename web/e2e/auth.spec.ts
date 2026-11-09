@@ -3,11 +3,16 @@ import { APIRequestContext, expect, test } from '@playwright/test'
 
 const mailpit = process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025'
 
-async function latestVerifyToken(request: APIRequestContext): Promise<string | null> {
+async function latestVerifyToken(request: APIRequestContext, toEmail: string): Promise<string | null> {
   const resp = await request.get(`${mailpit}/api/v1/messages`)
   const data = await resp.json()
-  const msgs = data.messages as { ID: string; Subject: string }[]
-  const msg = msgs.find((m) => m.Subject.includes('подтвердите'))
+  const want = toEmail.toLowerCase()
+  const msgs = data.messages as { ID: string; Subject: string; To?: { Address: string }[] }[]
+  const msg = msgs.find(
+    (m) =>
+      m.Subject.includes('подтвердите') &&
+      m.To?.some((t) => t.Address.toLowerCase() === want),
+  )
   if (!msg) return null
   const body = await request.get(`${mailpit}/api/v1/message/${msg.ID}`)
   const full = await body.json()
@@ -29,7 +34,7 @@ test('registration verify and login flow', async ({ page, request }, testInfo) =
 
   let token: string | null = null
   for (let i = 0; i < 30; i++) {
-    token = await latestVerifyToken(request)
+    token = await latestVerifyToken(request, email)
     if (token) break
     await page.waitForTimeout(1000)
   }
