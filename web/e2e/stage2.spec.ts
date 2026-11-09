@@ -5,11 +5,17 @@ import { join } from 'node:path'
 
 const mailpit = process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025'
 
-async function latestToken(request: APIRequestContext, subjectPart: string): Promise<string | null> {
+async function latestToken(
+  request: APIRequestContext,
+  subjectPart: string,
+  toEmail?: string,
+): Promise<string | null> {
   const resp = await request.get(`${mailpit}/api/v1/messages`)
   const data = await resp.json()
-  const msgs = data.messages as { ID: string; Subject: string }[]
-  const msg = msgs.find((m) => m.Subject.includes(subjectPart))
+  const msgs = (data.messages as { ID: string; Subject: string; To?: { Address: string }[] }[]).filter(
+    (m) => m.Subject.includes(subjectPart) && (!toEmail || m.To?.some((t) => t.Address === toEmail)),
+  )
+  const msg = msgs[0]
   if (!msg) return null
   const body = await request.get(`${mailpit}/api/v1/message/${msg.ID}`)
   const full = await body.json()
@@ -39,6 +45,14 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
   await page.getByTestId('login-password').fill(password)
   await page.getByTestId('login-submit').click()
   await expect(page.getByTestId('home-status')).toContainText(email)
+  await expect.poll(async () => {
+    return page.evaluate(async () => {
+      const r = await fetch('/api/me', { credentials: 'include' })
+      if (!r.ok) return false
+      const j = await r.json()
+      return j.email_verified === true
+    })
+  }).toBe(true)
   return { email, password }
 }
 
@@ -52,7 +66,7 @@ test('password reset flow', async ({ page, request }) => {
 
   let token: string | null = null
   for (let i = 0; i < 30; i++) {
-    token = await latestToken(request, 'сброс')
+    token = await latestToken(request, 'сброс', email)
     if (token) break
     await page.waitForTimeout(1000)
   }
@@ -76,6 +90,7 @@ test('password reset flow', async ({ page, request }) => {
 test('tus photo upload', async ({ page, request }, testInfo) => {
   test.setTimeout(120_000)
   await registerVerifyLogin(page, request)
+  await expect(page.getByTestId('upload-zone')).toBeVisible()
   const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
   const fileBuffer = readFileSync(fixture)
   await page.getByTestId('upload-picker').click()
