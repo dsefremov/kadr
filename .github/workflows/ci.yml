@@ -6,8 +6,16 @@ on:
   push:
     branches: [grok_bot, develop]
 
+# push + pull_request on the same commit used to race and sometimes schedule only a subset of jobs.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  go:
+  go-backend:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +63,7 @@ jobs:
 
   docker-integration:
     runs-on: ubuntu-24.04
-    needs: [go, web]
+    needs: [go-backend, web]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
