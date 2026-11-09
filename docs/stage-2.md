@@ -56,15 +56,15 @@
 
 ## Tests
 
-| Suite | Count (approx.) |
-|-------|-----------------|
-| Go `-race` | **12+** test functions (auth, upload, ratelimit, admin, jobs, password, units, api, version) |
+| Suite | Count (CI head `8b314b8`) |
+|-------|---------------------------|
+| Go `go test ./... -race` | **11** test functions, **9** packages with tests |
 | Vitest | **2** files / **2** tests |
-| Playwright + axe | **8** (auth + placeholder + stage2 reset/upload × 2 viewports) |
+| Playwright + axe | **8** passed (2 projects × auth, placeholder, password reset, tus upload) |
 
 ## CI
 
-**CI run link:** https://github.com/dsefremov/kadr/pull/3/checks (target: all jobs green on head `0a4e1f2`)
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42676432336 (`go-backend` + `-race`, `web`, `docker-integration` with Playwright + axe).
 
 ## Open questions
 
