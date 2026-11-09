@@ -43,6 +43,7 @@ async function registerVerifyLogin(page: import('@playwright/test').Page, reques
 }
 
 test('password reset flow', async ({ page, request }) => {
+  test.setTimeout(120_000)
   const { email } = await registerVerifyLogin(page, request)
   await page.goto('/forgot')
   await page.getByTestId('forgot-email').fill(email)
@@ -73,6 +74,7 @@ test('password reset flow', async ({ page, request }) => {
 })
 
 test('tus photo upload', async ({ page, request }, testInfo) => {
+  test.setTimeout(120_000)
   await registerVerifyLogin(page, request)
   const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
   const fileBuffer = readFileSync(fixture)

@@ -42,14 +42,14 @@ test('registration verify and login flow', async ({ page, request }, testInfo) =
   await page.getByTestId('login-email').fill(email)
   await page.getByTestId('login-password').fill(password)
   await page.getByTestId('login-submit').click()
-  await expect(page.getByText(`Вы вошли как ${email}`)).toBeVisible()
+  await expect(page.getByTestId('home-status')).toContainText(email)
 
   const accessibility = await new AxeBuilder({ page }).analyze()
   expect(accessibility.violations).toEqual([])
 
   const slug = testInfo.project.name
   await page.screenshot({
-    path: `../docs/stage-1/screenshots/auth-${slug}.png`,
+    path: `../docs/stage-2/screenshots/auth-${slug}.png`,
     fullPage: true,
   })
 })
