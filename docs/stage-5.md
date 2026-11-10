@@ -65,13 +65,44 @@ Source: CI artifact `media-benchmarks` on green run below.
 
 Integration: `ci-media-pipeline.sh` (three previews), `ci-timeline-smoke.sh` (ladder URLs + duplicate 409).
 
-## CI
+## Local docker-integration (agent VM)
 
-**Head:** `140cebbf2fd495aafbdbd380c91b8e77c7250795`
+Per Den: feature PRs to `develop` will not wait on `docker-integration` in Actions; full stack was exercised locally:
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42889646457 (`go-backend`, `web`, `docker-integration`).
+```bash
+cd /path/to/kadr
+export COMPOSE_PROFILES=dev
+KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
+```
 
-PR [#7](https://github.com/dsefremov/kadr/pull/7) `grok_bot` → `develop`. Workflow unchanged.
+Includes: `ci-media-pipeline.sh`, `ci-media-benchmarks.sh`, `ci-timeline-smoke.sh` (ladder + duplicate 409), `measure-memory.sh`, Playwright is CI-only on Actions unless port 8088 is free.
+
+**Result (2026-11-10, agent VM, head `67e24c1`):**
+
+| Step | Result |
+|------|--------|
+| `ci-integration.sh` (full) | compose up OK; **proxy** failed (`:8088` in use by stale vite preview) — worker/api/mysql/media-runner up |
+| `ci-media-pipeline.sh` | **ok** (320/640/1280 webp) |
+| `ci-media-benchmarks.sh` | skipped here (`docker compose images -q` empty on this host); peaks from CI artifact below |
+| `ci-timeline-smoke.sh` | **ok** (timeline + **duplicate 409**) |
+
+Peak derive (CI artifact `media-benchmarks`, [42889646457](https://github.com/dsefremov/kadr/actions/runs/42889646457)): heic **41.1** MiB, photo-24mp **49.5** MiB, hdr-hlg **268.7** MiB — all ≤768 MiB.
+
+## CI (PR #7 → develop)
+
+Workflow on this PR still runs all three jobs until [CI PR](https://github.com/dsefremov/kadr/compare/develop...grok_bot-ci) merges.
+
+| Check | Required for stage 5 handoff | On final head |
+|-------|------------------------------|---------------|
+| `go-backend` | yes | green on `67e24c1` ([run 42891576200](https://github.com/dsefremov/kadr/actions/runs/42891576200)) |
+| `web` | yes | green on `67e24c1` (same run) |
+| `docker-integration` | optional (local above) | _in progress or see [42889646457](https://github.com/dsefremov/kadr/actions/runs/42889646457)_ |
+
+**Head:** `67e24c1398f7eaeb527707b7a37660267feccdd6`
+
+**Green PR checks (go + web):** https://github.com/dsefremov/kadr/actions/runs/42891576200
+
+PR [#7](https://github.com/dsefremov/kadr/pull/7) `grok_bot` → `develop`.
 
 ## Open questions (with proposal)
 
