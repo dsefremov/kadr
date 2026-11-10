@@ -57,7 +57,7 @@ Source: CI artifact `media-benchmarks` on green run below.
 
 ## Tests
 
-| Suite | Count (`7030649`) |
+| Suite | Count (final head) |
 |-------|-------------------|
 | Go `-race` | 11 packages OK |
 | Vitest | **3** |
@@ -67,9 +67,9 @@ Integration: `ci-media-pipeline.sh` (three previews), `ci-timeline-smoke.sh` (la
 
 ## CI
 
-**Head:** `70306499ba49be193cdcc4bd9ef6d201bd74fcde`
+**Head:** `4bd4645da7236b5ea24fe9a460548a93e0b08bde`
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42874787424 (`go-backend`, `web`, `docker-integration`).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42876882285 (`go-backend`, `web`, `docker-integration`).
 
 PR [#7](https://github.com/dsefremov/kadr/pull/7) `grok_bot` → `develop`. Workflow unchanged.
 
