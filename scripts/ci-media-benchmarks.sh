@@ -21,7 +21,7 @@ run_derive() {
 
   docker compose run --rm --no-deps \
     -v "$jobdir:/job:ro" \
-    -v "$outdir:/out" \
+    -v "$outdir:/out:rw" \
     --entrypoint /opt/kadr/derive.sh \
     media-runner /job /out
 

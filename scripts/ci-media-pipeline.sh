@@ -14,7 +14,7 @@ touch "$IN/ready"
 
 docker compose run --rm --no-deps \
   -v "$IN:/job:ro" \
-  -v "$OUT:/out" \
+  -v "$OUT:/out:rw" \
   media-runner derive /job /out
 
 test -s "$OUT/master.jpg"
