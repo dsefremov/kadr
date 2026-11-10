@@ -4,11 +4,15 @@ on:
   pull_request:
     branches: [develop, main]
   push:
-    branches: [develop]
+    branches:
+      - develop
+      - grok_bot
+  workflow_dispatch:
 
-# grok_bot is validated via pull_request (PR #3); avoid duplicate push+PR runs on the same SHA.
+# One run per commit: push (fast jobs) and PR synchronize share the same SHA group;
+# cancel-in-progress drops the lighter push run when a full PR run starts.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -64,6 +68,7 @@ jobs:
   docker-integration:
     runs-on: ubuntu-24.04
     needs: [go-backend, web]
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
