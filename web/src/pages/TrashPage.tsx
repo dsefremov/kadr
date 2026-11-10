@@ -46,6 +46,17 @@ export function TrashPage() {
     }
   }
 
+  async function purgeOne(id: string) {
+    setMsg('')
+    const res = await fetch(`/api/media/${id}/trash`, { method: 'DELETE', credentials: 'include' })
+    if (res.ok) {
+      load()
+      setMsg('Элемент удалён навсегда.')
+    } else {
+      setMsg('Не удалось удалить.')
+    }
+  }
+
   async function emptyTrash() {
     setMsg('')
     const res = await fetch('/api/me/trash', { method: 'DELETE', credentials: 'include' })
@@ -97,14 +108,24 @@ export function TrashPage() {
               <p className="note">
                 Удалено {new Date(it.trashed_at).toLocaleString('ru-RU')}; осталось ~{it.days_left} дн.
               </p>
-              <button
-                type="button"
-                className="btn sm pri"
-                data-testid={`restore-${it.id}`}
-                onClick={() => void restore(it.id)}
-              >
-                Восстановить
-              </button>
+              <div className="trash-actions">
+                <button
+                  type="button"
+                  className="btn sm pri"
+                  data-testid={`restore-${it.id}`}
+                  onClick={() => void restore(it.id)}
+                >
+                  Восстановить
+                </button>
+                <button
+                  type="button"
+                  className="btn sm danger"
+                  data-testid={`purge-${it.id}`}
+                  onClick={() => void purgeOne(it.id)}
+                >
+                  Удалить навсегда
+                </button>
+              </div>
             </div>
           </li>
         ))}

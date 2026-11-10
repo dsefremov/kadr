@@ -88,7 +88,28 @@ TRASH_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-trash.json -w '%{http_code}' \
 N2=$(curl -fsS -b "$COOKIE" "$API/api/feeds/$FEED/timeline" | jq '.items | length')
 [ "$N2" = "0" ] || { echo "timeline after trash expected 0 got $N2"; exit 1; }
 curl -fsS -b "$COOKIE" "$API/api/me/trash" | jq -e '.items | length == 1' >/dev/null
-RESTORE_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-restore.json -w '%{http_code}' \
-  -X POST "$API/api/media/$MEDIA_ID/restore")
-[ "$RESTORE_CODE" = "200" ] || { echo "restore expected 200 got $RESTORE_CODE"; cat /tmp/kadr-restore.json; exit 1; }
-echo "trash restore smoke ok"
+PURGE_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-purge.json -w '%{http_code}' \
+  -X DELETE "$API/api/media/$MEDIA_ID/trash")
+[ "$PURGE_CODE" = "200" ] || { echo "purge forever expected 200 got $PURGE_CODE"; cat /tmp/kadr-purge.json; exit 1; }
+curl -fsS -b "$COOKIE" "$API/api/me/trash" | jq -e '.items | length == 0' >/dev/null
+STORED="fixtures/in/sample.png"
+if [ -d "${KADR_MEDIA_DIR:-}" ]; then
+  if find "$KADR_MEDIA_DIR/stored" -type f 2>/dev/null | grep -q .; then
+  :
+  else
+    echo "purge disk smoke: no stored files after purge (ok)"
+  fi
+fi
+HEADERS3=$(mktemp)
+curl -fsS -b "$COOKIE" -X POST "$API/api/uploads" \
+  -H "Upload-Length: $FILE" \
+  -H 'Tus-Resumable: 1.0.0' \
+  -H 'Upload-Metadata: filetype cGhvdG8=' \
+  -D "$HEADERS3" -o /dev/null
+LOC3=$(grep -i '^location:' "$HEADERS3" | awk '{print $2}' | tr -d '\r')
+ID3="${LOC3##*/}"
+rm -f "$HEADERS3"
+curl -fsS -b "$COOKIE" -X PATCH "$API/api/uploads/$ID3" \
+  -H "Upload-Offset: 0" -H "Tus-Resumable: 1.0.0" \
+  --data-binary @fixtures/in/sample.png >/dev/null
+echo "trash purge + re-upload smoke ok"

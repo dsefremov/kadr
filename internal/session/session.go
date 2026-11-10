@@ -64,12 +64,15 @@ func (s *Store) Load(ctx context.Context, plain string) (*Data, error) {
 	if revoked.Valid || now.After(exp) || now.After(idle) {
 		return nil, sql.ErrNoRows
 	}
-	var email string
+	var email, status string
 	var verified sql.NullTime
-	err = s.DB.QueryRowContext(ctx, `SELECT email, email_verified_at FROM users WHERE id = ?`, userID).
-		Scan(&email, &verified)
+	err = s.DB.QueryRowContext(ctx, `SELECT email, email_verified_at, status FROM users WHERE id = ?`, userID).
+		Scan(&email, &verified, &status)
 	if err != nil {
 		return nil, err
+	}
+	if status != "active" {
+		return nil, sql.ErrNoRows
 	}
 	_, _ = s.DB.ExecContext(ctx, `UPDATE sessions SET idle_expires_at = ? WHERE id_hash = ?`,
 		now.Add(IdleTTL), th[:])

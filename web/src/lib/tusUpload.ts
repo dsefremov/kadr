@@ -10,6 +10,20 @@ export type DuplicateUploadBody = {
   restore_url?: string
 }
 
+export type QuotaExceededBody = {
+  error: string
+  quota_free: number
+  need_bytes?: number
+}
+
+export class QuotaExceededError extends Error {
+  body: QuotaExceededBody
+  constructor(body: QuotaExceededBody) {
+    super('quota exceeded')
+    this.body = body
+  }
+}
+
 export class DuplicateUploadError extends Error {
   body: DuplicateUploadBody
   constructor(body: DuplicateUploadBody) {
@@ -29,6 +43,19 @@ function duplicateResponseText(err: Error): string {
   if (body) return body
   const m = err.message.match(/response text: (\{.*\}), request id/)
   return m?.[1] ?? ''
+}
+
+function tryParseQuota(err: Error): QuotaExceededError | null {
+  const status = (err as DetailedError).originalResponse?.getStatus() ?? 0
+  const text = duplicateResponseText(err)
+  if (status !== 403) return null
+  try {
+    const body = JSON.parse(text) as QuotaExceededBody
+    if (body?.error === 'quota_exceeded') return new QuotaExceededError(body)
+  } catch {
+    return null
+  }
+  return null
 }
 
 function tryParseDuplicate(err: Error): DuplicateUploadError | null {
@@ -97,6 +124,12 @@ export function createTusUpload(
       resolve(id)
     },
     onError: (err) => {
+      const q = tryParseQuota(err)
+      if (q) {
+        handlers.onError?.(q)
+        reject(q)
+        return
+      }
       const dup = tryParseDuplicate(err)
       if (dup) {
         handlers.onError?.(dup)

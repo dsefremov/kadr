@@ -271,6 +271,56 @@ a {
   max-width: 520px;
   margin: 0 auto 16px;
 }
+.quota {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+  max-width: 280px;
+}
+.quota .bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.quota .bar b {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.quota .bar.hot b:first-child {
+  background: var(--warn);
+}
+.quota .bar.full b:first-child {
+  background: var(--err);
+}
+.quota .qt {
+  font-size: 11px;
+  color: var(--warn);
+}
+.panel {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  background: var(--card);
+}
+.panel-danger {
+  border-color: #f0b7af;
+}
+.panel h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+.trash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
 .banner {
   display: flex;
   gap: 14px;
@@ -280,6 +330,17 @@ a {
   background: var(--card);
   border: 1px solid var(--line);
   margin: 0 0 24px;
+}
+.banner.warn {
+  background: var(--warn-soft);
+  border-color: #f1d39f;
+}
+.banner.err {
+  background: var(--err-soft);
+  border-color: #f0b7af;
+}
+.banner .t1 {
+  font-weight: 700;
 }
 .banner .t1 {
   font-weight: 700;

@@ -233,6 +233,73 @@ func PurgePermanent(ctx context.Context, db *sql.DB, mediaRoot string, mediaID i
 	return nil
 }
 
+// PurgeAny deletes media regardless of trash state (account wipe).
+func PurgeAny(ctx context.Context, db *sql.DB, mediaRoot string, mediaID int64) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var ownerID int64
+	var pubID string
+	var stored uint64
+	var trashed sql.NullTime
+	err = tx.QueryRowContext(ctx, `
+		SELECT owner_id, public_id, stored_bytes, trashed_at FROM media WHERE id = ? FOR UPDATE`, mediaID).
+		Scan(&ownerID, &pubID, &stored, &trashed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `DELETE FROM media WHERE id = ?`, mediaID)
+	if err != nil {
+		return err
+	}
+	if stored > 0 {
+		if trashed.Valid {
+			_, err = tx.ExecContext(ctx, `
+				UPDATE users SET trash_bytes = trash_bytes - ? WHERE id = ? AND trash_bytes >= ?`,
+				stored, ownerID, stored)
+		} else {
+			_, err = tx.ExecContext(ctx, `
+				UPDATE users SET used_bytes = used_bytes - ? WHERE id = ? AND used_bytes >= ?`,
+				stored, ownerID, stored)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	_ = os.RemoveAll(filepath.Join(mediaRoot, "stored", fmt.Sprintf("%d", ownerID), pubID))
+	return nil
+}
+
+func DeleteTrashedByPublicID(ctx context.Context, db *sql.DB, mediaRoot string, ownerID int64, publicID string) error {
+	row, err := ByPublicID(ctx, db, publicID)
+	if errors.Is(err, ErrNotFound) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if row.OwnerID != ownerID {
+		return ErrTrashOwner
+	}
+	var trashed sql.NullTime
+	err = db.QueryRowContext(ctx, `SELECT trashed_at FROM media WHERE id = ?`, row.ID).Scan(&trashed)
+	if err != nil {
+		return err
+	}
+	if !trashed.Valid {
+		return ErrNotTrashed
+	}
+	return PurgePermanent(ctx, db, mediaRoot, row.ID)
+}
+
 func EmptyTrash(ctx context.Context, db *sql.DB, mediaRoot string, ownerID int64) (int, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT id FROM media WHERE owner_id = ? AND trashed_at IS NOT NULL`, ownerID)
