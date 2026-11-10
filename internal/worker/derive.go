@@ -66,8 +66,8 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 		return nil
 	}
 	result, err := media.WaitResult(spool, jobID, 30*time.Minute)
-	media.CleanupJob(spool, jobID)
 	if err != nil || result == nil || !result.OK {
+		media.CleanupJob(spool, jobID)
 		msg := "processing failed"
 		code := "processing"
 		if result != nil {
@@ -100,6 +100,7 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 		return nil
 	}
 	media.DeleteIncoming(p.uploads, &row)
+	media.CleanupJob(spool, jobID)
 	p.log.Info("derive complete", "upload_id", row.ID, "media_id", mediaID, "pub", mediaPub)
 	return nil
 }
