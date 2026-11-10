@@ -64,9 +64,10 @@ derive_photo() {
     src="$flat"
   fi
 
-  vips thumbnail "$src" "$WORK/thumb.jpg" 3200 --size=both --no-rotate --linear --Q=85
-  vips autorot "$WORK/thumb.jpg" "$OUT_DIR/master.jpg" 2>/dev/null || cp "$WORK/thumb.jpg" "$OUT_DIR/master.jpg"
-  vips thumbnail "$src" "$OUT_DIR/preview-640.webp" 640 --size=both --no-rotate --Q=80
+  vips thumbnail "$src" "$WORK/thumb.v" 3200 --size=both --no-rotate
+  vips copy "$WORK/thumb.v" "$OUT_DIR/master.jpg[Q=85,strip]"
+  vips thumbnail "$src" "$WORK/prev.v" 640 --size=both --no-rotate
+  vips copy "$WORK/prev.v" "$OUT_DIR/preview-640.webp[Q=80,strip]"
 
   read -r mw mh <<EOF
 $(dims "$OUT_DIR/master.jpg")
@@ -105,7 +106,8 @@ derive_video() {
 
   ffmpeg -nostdin -y -ss 1 -i "$OUT_DIR/video.mp4" -vframes 1 \
     "$WORK/poster.png" 2>/dev/null || ffmpeg -nostdin -y -i "$OUT_DIR/video.mp4" -vframes 1 "$WORK/poster.png"
-  vips thumbnail "$WORK/poster.png" "$OUT_DIR/poster.webp" 1280 --size=both --no-rotate --Q=80
+  vips thumbnail "$WORK/poster.png" "$WORK/poster.v" 1280 --size=both --no-rotate
+  vips copy "$WORK/poster.v" "$OUT_DIR/poster.webp[Q=80,strip]"
 
   vw=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$OUT_DIR/video.mp4")
   vh=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$OUT_DIR/video.mp4")
