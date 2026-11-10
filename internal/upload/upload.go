@@ -195,7 +195,9 @@ func (s *Service) Patch(ctx context.Context, publicID string, ownerID int64, exp
 		if err != nil {
 			return nil, err
 		}
-		_ = jobs.EnqueueTx(ctx, tx, jobs.KindDerive, map[string]int64{"upload_id": row.ID}, fmt.Sprintf("derive:%d", row.ID))
+		if err := jobs.EnqueueDeriveTx(ctx, tx, row.ID); err != nil {
+			return nil, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err

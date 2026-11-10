@@ -53,6 +53,25 @@ func EnqueueTxAfter(ctx context.Context, tx *sql.Tx, kind string, payload any, i
 	return err
 }
 
+// EnqueueDeriveTx (re)queues media derive when an upload completes. If an idem row exists
+// (e.g. a no-op derive finished before upload was visible), reset it to pending.
+func EnqueueDeriveTx(ctx context.Context, tx *sql.Tx, uploadID int64) error {
+	body, err := json.Marshal(map[string]int64{"upload_id": uploadID})
+	if err != nil {
+		return err
+	}
+	idem := fmt.Sprintf("derive:%d", uploadID)
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO jobs (kind, payload, idem_key, state, run_after)
+		VALUES (?, ?, ?, 'pending', NOW())
+		ON DUPLICATE KEY UPDATE
+			state = 'pending',
+			run_after = NOW(),
+			lease_until = NULL,
+			payload = VALUES(payload)`, KindDerive, body, idem)
+	return err
+}
+
 func Claim(ctx context.Context, db *sql.DB) (*Job, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {

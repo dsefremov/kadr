@@ -29,9 +29,11 @@ if [ -n "${GW}" ] || ! docker run --rm --network kadr_internal alpine:3.20 nc -z
 fi
 
 docker compose run --rm migrate
-docker compose up -d api worker proxy
+docker compose up -d api worker media-runner proxy
 # api/worker run as uid 10001; fresh named volumes are root-owned.
 docker compose exec -T -u root api sh -c 'chown -R 10001:10001 /data'
+docker compose exec -T -u root worker sh -c 'chmod -R a+rwX /spool && ls -la /spool'
+docker compose exec -T -u root media-runner sh -c 'chmod -R a+rwX /spool' 2>/dev/null || true
 
 API_PORT=8080
 PORT="${KADR_HTTP_PORT:-8088}"
@@ -65,6 +67,9 @@ else
 fi
 
 docker compose run --rm --no-deps -e FIXTURES_DIR=/fixtures/in media-runner smoke
+./scripts/ci-media-pipeline.sh
+./scripts/ci-media-benchmarks.sh
+./scripts/ci-timeline-smoke.sh
 
 ./scripts/measure-memory.sh | tee /tmp/kadr-memory.txt
 

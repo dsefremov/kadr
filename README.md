@@ -1,6 +1,6 @@
 # Кадр (Kadr)
 
-Private photo and video feed (memories.gallery-style). **Stage 3** adds the public-feed confirmation modal and **tus-js-client** resumable uploads. **Stage 2** added tus API, feed, and auth completion; **media processing** is stage 4.
+Private photo and video feed (memories.gallery-style). **Stage 4** runs the **media pipeline** (ffmpeg/libvips in isolated `media-runner`, timeline + `/m/` delivery). **Stage 3** added tus + public-feed modal. See `docs/stage-4.md`.
 
 ## Stack
 
