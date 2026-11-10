@@ -64,7 +64,7 @@ Under **768 MiB** media-runner limit in compose; single job at a time.
 
 ## Tests
 
-| Suite | Count (`1c3e13f`) |
+| Suite | Count (`90625d6`) |
 |-------|-------------------|
 | Go `-race` | **19** `Test*` functions (`go test ./... -race`) |
 | Vitest | **3** |
@@ -74,9 +74,9 @@ Integration: `ci-media-pipeline.sh`, `ci-timeline-smoke.sh` (timeline **items≥
 
 ## CI
 
-**Head:** `1c3e13f10ecc609cd21c58b6cd6fa98cbb517141` (pipeline fix `e497bdf`, screenshots `46d744f`)
+**Head:** `90625d6b85046979b954e6e17f4775db6bac0068` (pipeline fix `e497bdf`, screenshots `46d744f`)
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42813625222 (`go-backend`, `web`, `docker-integration`).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42815220272 (`go-backend`, `web`, `docker-integration`).
 
 ## Open questions (with proposal)
 
