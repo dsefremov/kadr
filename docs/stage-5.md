@@ -45,38 +45,33 @@ CC0 set unchanged from stage 4. **HDR HEIC golden** not added — HDR coverage v
 
 ## Processing memory / time (768 MiB cap)
 
-Measured locally (`docker run --memory 768m`, `derive.sh`, profile `v1sdr20261111`):
+Peak derive (`scripts/ci-media-benchmarks.sh`, profile `v1sdr20261111`, `docker run --memory 768m`):
 
 | Asset | Kind | Wall (s) | Peak RSS (MiB) | ≤768 MiB |
 |-------|------|----------|----------------|----------|
-| `sample.heic` | photo | 1 | 41.2 | yes |
-| `photo-24mp.jpg` | photo | 1 | 49.7 | yes |
-| `benchmark-hdr-hlg.mov` | video | 33 | 276.7 | yes |
+| `sample.heic` | photo | 1 | **41.1** | yes |
+| `photo-24mp.jpg` | photo | 1 | **49.5** | yes |
+| `benchmark-hdr-hlg.mov` | video | 59 | **268.7** | yes |
 
-Adding 320/1280 WebP did not change HDR video peak materially vs stage 4.
+Source: CI artifact `media-benchmarks` on green run below.
 
-## Tests (local on final head)
+## Tests
 
-| Suite | Result |
-|-------|--------|
-| Go `vet` + `test -race` | 11 packages OK |
-| `go test` functions | 21 |
-| Vitest | 3 passed |
-| Playwright stage 5 (+ axe in screenshot spec) | 4 passed (2 flow + 2 screenshot viewports) |
-| `ci-media-pipeline.sh` | OK |
-| `ci-timeline-smoke.sh` | OK (timeline ladder URLs + duplicate 409) |
+| Suite | Count (`7030649`) |
+|-------|-------------------|
+| Go `-race` | 11 packages OK |
+| Vitest | **3** |
+| Playwright + axe | **36** passed (stage 2–5 specs) |
 
-Full Playwright matrix (all stages) not re-run locally in this turn; stage 5 specs green on `:8088` vite preview → API `:8080`.
+Integration: `ci-media-pipeline.sh` (three previews), `ci-timeline-smoke.sh` (ladder URLs + duplicate 409).
 
-## CI / GitHub Actions
+## CI
 
-| Item | Value |
-|------|--------|
-| **Workflow** | Unchanged (`.github/workflows/ci.yml`) |
-| **Last full green CI on repo** | Merge **PR #6** → `develop` @ **`c722293`** — [run 42837503467](https://github.com/dsefremov/kadr/actions/runs/42837503467) (go-backend, web, docker-integration) |
-| **CI on this stage-5 head** | **Not run** — Actions jobs for `dsefremov` currently fail in ~2–3s without a runner (billing; Den investigating). Verified **locally** on commit below instead. |
+**Head:** `70306499ba49be193cdcc4bd9ef6d201bd74fcde`
 
-**Final head (stage 5 PR):** `a30efc1`
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42874787424 (`go-backend`, `web`, `docker-integration`).
+
+PR [#7](https://github.com/dsefremov/kadr/pull/7) `grok_bot` → `develop`. Workflow unchanged.
 
 ## Open questions (with proposal)
 
@@ -84,3 +79,4 @@ Full Playwright matrix (all stages) not re-run locally in this turn; stage 5 spe
 2. **Duplicate while first copy still `processing`** — Now 409 with same `media_id`; Proposal: optional 202 + poll UX if uploads race often.
 3. **HDR HEIC golden** — Proposal: add CC0 PQ/HLG HEIF when a vetted source is identified (stage 6+).
 4. **Absolute tus `Location` with `KADR_PUBLIC_URL`** — Proposal: keep relative for same-site; add absolute only if off-site tus clients appear.
+5. **Public deep link on duplicate** — Proposal: include `/u/{handle}/feed#media_id` when public feed ships; until then `preview_url` only.
