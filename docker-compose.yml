@@ -129,6 +129,7 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.media-runner
     command: ['watch']
+    user: '0:0'
     environment:
       KADR_SPOOL_DIR: /spool
     network_mode: 'none'
