@@ -31,7 +31,7 @@ func Ping(ctx context.Context, db *sql.DB) error {
 	return db.PingContext(ctx)
 }
 
-const RequiredSchemaVersion int64 = 4
+const RequiredSchemaVersion int64 = 5
 
 func MigrationApplied(ctx context.Context, db *sql.DB) (bool, error) {
 	var n int

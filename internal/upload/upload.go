@@ -35,6 +35,7 @@ var (
 type DuplicateMediaError struct {
 	MediaPublicID string
 	MediaState    string
+	InTrash       bool
 }
 
 func (e *DuplicateMediaError) Error() string {
@@ -194,15 +195,19 @@ func (s *Service) Patch(ctx context.Context, publicID string, ownerID int64, exp
 		if derr != nil {
 			return nil, derr
 		}
-		existingPub, existingState, derr := findExistingMedia(ctx, s.DB, row.OwnerID, dedup, row.UploadLength)
+		hit, derr := findExistingMedia(ctx, s.DB, row.OwnerID, dedup, row.UploadLength)
 		if derr != nil {
 			return nil, derr
 		}
-		if existingPub != "" {
+		if hit != nil {
 			if err := s.abortDuplicate(ctx, row); err != nil {
 				return nil, err
 			}
-			return nil, &DuplicateMediaError{MediaPublicID: existingPub, MediaState: existingState}
+			return nil, &DuplicateMediaError{
+				MediaPublicID: hit.publicID,
+				MediaState:    hit.state,
+				InTrash:       hit.inTrash,
+			}
 		}
 	}
 	tx, err := s.DB.BeginTx(ctx, nil)

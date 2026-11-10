@@ -8,6 +8,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { VerifyPage } from './pages/VerifyPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { TrashPage } from './pages/TrashPage'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/verify" element={<VerifyPage />} />
         <Route path="/forgot" element={<ForgotPasswordPage />} />
         <Route path="/reset" element={<ResetPasswordPage />} />
+        <Route path="/trash" element={<TrashPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

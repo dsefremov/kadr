@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Shell } from '../components/Shell'
 import { Timeline } from '../components/Timeline'
@@ -30,10 +30,12 @@ type PendingUpload = {
 }
 
 export function HomePage() {
+  const navigate = useNavigate()
   const [me, setMe] = useState<Me | null>(null)
   const [guest, setGuest] = useState(false)
   const [uploadMsg, setUploadMsg] = useState('')
   const [uploadDupUrl, setUploadDupUrl] = useState<string | null>(null)
+  const [uploadDupTrash, setUploadDupTrash] = useState<string | null>(null)
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [timelineItems, setTimelineItems] = useState<
     { id: string; kind: string; width?: number; height?: number; urls?: Record<string, string> }[]
@@ -138,6 +140,7 @@ export function HomePage() {
   async function runUpload(file: File, resume?: PendingUpload) {
     setUploadMsg('')
     setUploadDupUrl(null)
+    setUploadDupTrash(null)
     setUploadPct(0)
     const kind = (file.type.startsWith('video/') ? 'video' : 'photo') as 'photo' | 'video'
     const kindFromServer = resume?.kind === 'video' ? 'video' : 'photo'
@@ -169,7 +172,12 @@ export function HomePage() {
       if (e instanceof DuplicateUploadError) {
         setUploadPct(null)
         setUploadDupUrl(e.body.preview_url)
-        setUploadMsg('Этот файл уже есть в вашей ленте.')
+        if (e.body.error === 'duplicate_in_trash') {
+          setUploadDupTrash(e.body.media_id)
+          setUploadMsg('Этот файл в корзине — восстановить?')
+        } else {
+          setUploadMsg('Этот файл уже есть в вашей ленте.')
+        }
         refreshTimeline()
         loadPending()
         return
@@ -182,6 +190,25 @@ export function HomePage() {
 
   async function onFilePicked(file: File, resume?: PendingUpload) {
     await runUpload(file, resume)
+  }
+
+  async function trashMedia(id: string) {
+    const res = await fetch(`/api/media/${id}/trash`, { method: 'POST', credentials: 'include' })
+    if (res.ok) {
+      refreshTimeline()
+    }
+  }
+
+  async function restoreDupFromTrash() {
+    if (!uploadDupTrash) return
+    const res = await fetch(`/api/media/${uploadDupTrash}/restore`, { method: 'POST', credentials: 'include' })
+    if (res.ok) {
+      setUploadMsg('Файл восстановлен в ленту.')
+      setUploadDupTrash(null)
+      refreshTimeline()
+    } else if (res.status === 403) {
+      setUploadMsg('Недостаточно места в квоте для восстановления.')
+    }
   }
 
   return (
@@ -262,6 +289,19 @@ export function HomePage() {
                     </a>
                   </>
                 ) : null}
+                {uploadDupTrash ? (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="btn sm pri"
+                      data-testid="upload-restore-trash"
+                      onClick={() => void restoreDupFromTrash()}
+                    >
+                      Восстановить
+                    </button>
+                  </>
+                ) : null}
               </p>
             ) : null}
           </div>
@@ -295,8 +335,12 @@ export function HomePage() {
                 <button type="button" className="btn sm" data-testid="visibility-toggle" onClick={onVisibilityClick}>
                   {me.feed_visibility === 'public' ? 'публичная' : 'личная'}
                 </button>
+                {' · '}
+                <button type="button" className="btn sm" data-testid="open-trash" onClick={() => navigate('/trash')}>
+                  Корзина
+                </button>
               </p>
-              <Timeline items={timelineItems} processing={mediaProcessing} />
+              <Timeline items={timelineItems} processing={mediaProcessing} onTrash={(id) => void trashMedia(id)} />
             </>
           ) : null}
         </>

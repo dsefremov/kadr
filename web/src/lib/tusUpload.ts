@@ -7,6 +7,7 @@ export type DuplicateUploadBody = {
   media_state?: string
   preview_url: string
   timeline_url?: string
+  restore_url?: string
 }
 
 export class DuplicateUploadError extends Error {
@@ -33,10 +34,12 @@ function duplicateResponseText(err: Error): string {
 function tryParseDuplicate(err: Error): DuplicateUploadError | null {
   const status = (err as DetailedError).originalResponse?.getStatus() ?? 0
   const text = duplicateResponseText(err)
-  if (status !== 409 && !text.includes('"duplicate"')) return null
+  if (status !== 409 && !text.includes('"duplicate')) return null
   try {
     const body = JSON.parse(text) as DuplicateUploadBody
-    if (body?.error === 'duplicate' && body.media_id) return new DuplicateUploadError(body)
+    if ((body?.error === 'duplicate' || body?.error === 'duplicate_in_trash') && body.media_id) {
+      return new DuplicateUploadError(body)
+    }
   } catch {
     return null
   }
