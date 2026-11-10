@@ -8,7 +8,24 @@ mkdir -p "$OUT_DIR"
 WORK="/tmp/kadr-derive-$$"
 rm -rf "$WORK"
 mkdir -p "$WORK"
-trap 'rm -rf "$WORK"' EXIT
+
+fail() {
+  code="$1"
+  msg="$2"
+  printf '{"ok":false,"error_code":"%s","error_message":"%s"}\n' "$code" "$msg" >"$OUT_DIR/result.json"
+  touch "$OUT_DIR/failed"
+  rm -rf "$WORK"
+  exit 0
+}
+
+on_exit() {
+  rc=$?
+  rm -rf "$WORK" 2>/dev/null || true
+  if [ ! -f "$OUT_DIR/result.json" ]; then
+    fail internal "derive aborted (exit $rc)"
+  fi
+}
+trap on_exit EXIT
 
 MANIFEST="$JOB_DIR/manifest.json"
 INPUT_REL="$(sed -n 's/.*"input_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST" | head -1)"
@@ -27,14 +44,6 @@ dims() {
 
 sha256_file() {
   sha256sum "$1" | awk '{print $1}'
-}
-
-fail() {
-  code="$1"
-  msg="$2"
-  printf '{"ok":false,"error_code":"%s","error_message":"%s"}\n' "$code" "$msg" >"$OUT_DIR/result.json"
-  touch "$OUT_DIR/failed"
-  exit 0
 }
 
 if [ ! -f "$INPUT" ]; then
@@ -69,12 +78,16 @@ derive_photo() {
   vips thumbnail "$src" "$WORK/prev.v" 640 --size=both --no-rotate
   vips copy "$WORK/prev.v" "$OUT_DIR/preview-640.webp[Q=80,strip]"
 
-  read -r mw mh <<EOF
-$(dims "$OUT_DIR/master.jpg")
-EOF
-  read -r pw ph <<EOF
-$(dims "$OUT_DIR/preview-640.webp")
-EOF
+  dim_line="$(dims "$OUT_DIR/master.jpg")"
+  mw="${dim_line%% *}"
+  mh="${dim_line#* }"
+  mw="${mw:-0}"
+  mh="${mh:-0}"
+  prev_line="$(dims "$OUT_DIR/preview-640.webp")"
+  pw="${prev_line%% *}"
+  ph="${prev_line#* }"
+  pw="${pw:-0}"
+  ph="${ph:-0}"
   mb=$(wc -c <"$OUT_DIR/master.jpg")
   pb=$(wc -c <"$OUT_DIR/preview-640.webp")
 
@@ -113,9 +126,11 @@ derive_video() {
   vh=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$OUT_DIR/video.mp4")
   vb=$(wc -c <"$OUT_DIR/video.mp4")
   pb=$(wc -c <"$OUT_DIR/poster.webp")
-  read -r pw ph <<EOF
-$(dims "$OUT_DIR/poster.webp")
-EOF
+  poster_line="$(dims "$OUT_DIR/poster.webp")"
+  pw="${poster_line%% *}"
+  ph="${poster_line#* }"
+  pw="${pw:-0}"
+  ph="${ph:-0}"
 
   wall_end=$(date +%s)
   wall=$((wall_end - wall_start))

@@ -7,22 +7,23 @@ mkdir -p "$SPOOL/in" "$SPOOL/out"
 busy=0
 while true; do
   if [ "$busy" -eq 0 ]; then
-    for ready in "$SPOOL/in"/*/ready; do
-      [ -f "$ready" ] || continue
+    ready="$(find "$SPOOL/in" -mindepth 2 -maxdepth 2 -name ready -type f 2>/dev/null | head -n 1)"
+    if [ -n "$ready" ] && [ -f "$ready" ]; then
       job_dir=$(dirname "$ready")
       job_id=$(basename "$job_dir")
       out="$SPOOL/out/$job_id"
       mkdir -p "$out"
-      if [ -f "$out/done" ] || [ -f "$out/failed" ]; then
+      chmod -R a+rwX "$job_dir" "$out" 2>/dev/null || true
+      if [ -f "$out/done" ] || [ -f "$out/failed" ] || [ -f "$out/result.json" ]; then
         rm -f "$ready"
-        continue
+      else
+        busy=1
+        echo "media-runner: derive job_id=$job_id" >&2
+        /opt/kadr/derive.sh "$job_dir" "$out" || true
+        rm -f "$ready"
+        busy=0
       fi
-      busy=1
-      /opt/kadr/derive.sh "$job_dir" "$out" || true
-      rm -f "$ready"
-      busy=0
-      break
-    done
+    fi
   fi
   sleep 1
 done

@@ -72,7 +72,20 @@ func PrepareJob(spool, jobID, kind, srcPath string) (jobDir string, err error) {
 	if err := os.WriteFile(filepath.Join(jobDir, "ready"), []byte("1"), 0o640); err != nil {
 		return "", err
 	}
+	relaxSpoolTree(jobDir, filepath.Join(spool, "out", jobID))
 	return jobDir, nil
+}
+
+func relaxSpoolTree(jobDir, outDir string) {
+	_ = os.Chmod(jobDir, 0o777)
+	_ = os.Chmod(outDir, 0o777)
+	entries, err := os.ReadDir(jobDir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		_ = os.Chmod(filepath.Join(jobDir, e.Name()), 0o666)
+	}
 }
 
 func copyFile(src, dst string) error {

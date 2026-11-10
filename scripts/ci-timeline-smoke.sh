@@ -53,5 +53,8 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 echo "timeline smoke timeout"
+curl -fsS -b "$COOKIE" "$API/api/me/media" 2>/dev/null | jq . || true
+curl -fsS -b "$COOKIE" "$API/api/me/uploads" 2>/dev/null | jq . || true
+docker compose exec -T worker ls -la /spool/in /spool/out 2>&1 | tail -40 || true
 docker compose logs --tail=120 worker media-runner 2>&1 | tail -80
 exit 1

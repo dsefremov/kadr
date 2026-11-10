@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,11 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 	if err := json.Unmarshal(payload, &pl); err != nil {
 		return err
 	}
+	var existingState sql.NullString
+	_ = p.db.QueryRowContext(ctx, `SELECT state FROM media WHERE upload_id = ?`, pl.UploadID).Scan(&existingState)
+	if existingState.Valid && existingState.String == "ready" {
+		return nil
+	}
 	var row upload.Row
 	err := p.db.QueryRowContext(ctx, `
 		SELECT id, public_id, owner_id, kind_declared, upload_length, offset_bytes, incoming_key, state
@@ -29,7 +35,7 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 		return err
 	}
 	if row.State != "complete" {
-		return nil
+		return fmt.Errorf("upload %d not complete (state=%s)", row.ID, row.State)
 	}
 	src := filepath.Join(p.uploads.RootDir, row.IncomingKey)
 	kind, err := media.SniffKind(src)
@@ -60,6 +66,7 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 	}
 	spool := media.SpoolRoot()
 	jobID := fmt.Sprintf("u%d", row.ID)
+	p.log.Info("derive start", "upload_id", row.ID, "spool_job", jobID, "kind", kind)
 	_, err = media.PrepareJob(spool, jobID, kind, src)
 	if err != nil {
 		p.failMedia(ctx, mediaID, &row, "spool", err.Error())
