@@ -1,0 +1,4 @@
+actionlint
+.tmp-bench-out/
+.tmp-spool-in/
+.tmp-spool-out/

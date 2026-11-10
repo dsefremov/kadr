@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+# Toolchain: Debian bookworm packages (versions recorded in versions.lock and printed in smoke).
+FROM debian:bookworm-slim
+
+COPY deploy/media-runner/versions.lock /opt/kadr/versions.lock
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libvips-tools \
+    libheif1 \
+    libheif-examples \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -u 10002 -r -s /usr/sbin/nologin runner
+
+WORKDIR /opt/kadr
+COPY deploy/media-runner/*.sh /opt/kadr/
+RUN chmod +x /opt/kadr/*.sh
+
+USER runner
+ENTRYPOINT ["/opt/kadr/entrypoint.sh"]

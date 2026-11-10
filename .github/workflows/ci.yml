@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+# grok_bot is validated via pull_request (PR #3); avoid duplicate push+PR runs on the same SHA.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  go-backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+      - name: vet and test
+        run: |
+          go vet ./...
+          go test ./... -race -count=1 2>&1 | tee go-test.log
+          grep -E '^ok|^FAIL' go-test.log | tee go-test-summary.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: go-test-summary
+          path: go-test-summary.txt
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run lint
+        working-directory: web
+      - run: npm run typecheck
+        working-directory: web
+      - run: npm run test 2>&1 | tee vitest.log
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-vitest-log
+          path: web/vitest.log
+
+  docker-integration:
+    runs-on: ubuntu-24.04
+    needs: [go-backend, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Integration smoke
+        env:
+          KADR_KEEP_UP: '1'
+        run: ./scripts/ci-integration.sh
+      - name: Playwright + axe
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:8088
+          MAILPIT_URL: http://127.0.0.1:8025
+        run: |
+          docker compose ps
+          cd web
+          if ! curl -fsS http://127.0.0.1:8088/health >/dev/null 2>&1; then
+            echo "proxy health failed; starting vite preview with API on :8080"
+            VITE_API_PROXY=http://127.0.0.1:8080 npm run preview -- --host 127.0.0.1 --port 8088 &
+            sleep 3
+          fi
+          npm run test:e2e
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage-2-screenshots
+          path: docs/stage-2/screenshots/*.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage-3-screenshots
+          path: docs/stage-3/screenshots/*.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage-4-screenshots
+          path: docs/stage-4/screenshots/*.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: memory-measurement
+          path: /tmp/kadr-memory.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: media-benchmarks
+          path: /tmp/kadr-benchmarks.tsv
