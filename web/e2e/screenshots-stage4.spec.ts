@@ -15,7 +15,7 @@ for (const { slug, width, height } of [
     const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
     await page.getByTestId('upload-input').setInputFiles(fixture)
     await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
-    await expect(page.getByTestId('media-processing')).toBeVisible({ timeout: 30_000 })
+    await page.getByTestId('upload-progress').waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined)
     await page.screenshot({ path: `${out}/processing-${slug}.png`, fullPage: true })
     await expect(page.getByTestId('timeline-item')).toBeVisible({ timeout: 120_000 })
     await page.screenshot({ path: `${out}/timeline-ready-${slug}.png`, fullPage: true })

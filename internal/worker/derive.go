@@ -105,7 +105,7 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 }
 
 func (p *Processor) failUpload(ctx context.Context, row *upload.Row, code, msg string) {
-	_ = media.MarkFailed(ctx, p.db, 0, row.OwnerID, row.UploadLength, code, msg)
+	_ = media.InsertFailed(ctx, p.db, row.OwnerID, row.ID, row.Kind, code, msg, row.UploadLength)
 	media.DeleteIncoming(p.uploads, row)
 }
 

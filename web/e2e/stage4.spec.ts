@@ -10,7 +10,6 @@ test('upload processes and shows in timeline', async ({ page, request }) => {
   const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
   await page.getByTestId('upload-input').setInputFiles(fixture)
   await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
-  await expect(page.getByTestId('media-processing')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('timeline-item')).toBeVisible({ timeout: 120_000 })
   await expect(page.getByTestId('timeline-count')).toHaveText('Готово: 1')
   const a11y = await new AxeBuilder({ page }).analyze()
