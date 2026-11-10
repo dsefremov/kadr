@@ -115,3 +115,8 @@ jobs:
         with:
           name: memory-measurement
           path: /tmp/kadr-memory.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: media-benchmarks
+          path: /tmp/kadr-benchmarks.tsv

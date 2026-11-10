@@ -2,6 +2,12 @@
 # Process one spool job directory; writes OUT_DIR/result.json
 set -eu
 
+. /opt/kadr/peak-metrics.sh
+
+export VIPS_CONCURRENCY=1
+export VIPS_CACHE_MAX="${VIPS_CACHE_MAX:-64}"
+export VIPS_DISC_THRESHOLD="${VIPS_DISC_THRESHOLD:-64m}"
+
 JOB_DIR="${1:?job dir}"
 OUT_DIR="${2:-$(dirname "$JOB_DIR")/../out/$(basename "$JOB_DIR")}"
 mkdir -p "$OUT_DIR"
@@ -33,10 +39,27 @@ KIND="$(sed -n 's/.*"kind"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFES
 INPUT="$JOB_DIR/$INPUT_REL"
 
 wall_start=$(date +%s)
-peak_rss=0
-if [ -r /proc/self/status ]; then
-  peak_rss=$(awk '/^VmRSS:/{print $2}' /proc/self/status)
+cgroup_peak_start=0
+if cgroup_kb="$(peak_kb_from_cgroup 2>/dev/null)"; then
+  cgroup_peak_start="$cgroup_kb"
 fi
+proc_peak_start="$(peak_kb_from_proc 2>/dev/null || echo 0)"
+proc_peak_start="${proc_peak_start:-0}"
+
+finalize_metrics() {
+  wall_end=$(date +%s)
+  wall=$((wall_end - wall_start))
+  proc_peak="$(peak_kb_from_proc 2>/dev/null || echo 0)"
+  proc_peak="${proc_peak:-0}"
+  cgroup_peak="$cgroup_peak_start"
+  if cgroup_kb="$(peak_kb_from_cgroup 2>/dev/null)"; then
+    cgroup_peak="$cgroup_kb"
+  fi
+  peak_rss_kb="$(max_kb "$proc_peak" "$cgroup_peak")"
+  peak_rss_kb="$(max_kb "$peak_rss_kb" "$proc_peak_start")"
+  export DERIVE_WALL="$wall"
+  export DERIVE_PEAK_RSS_KB="$peak_rss_kb"
+}
 
 dims() {
   vipsheader -f width -f height "$1" 2>/dev/null | tr '\n' ' '
@@ -91,10 +114,9 @@ derive_photo() {
   mb=$(wc -c <"$OUT_DIR/master.jpg")
   pb=$(wc -c <"$OUT_DIR/preview-640.webp")
 
-  wall_end=$(date +%s)
-  wall=$((wall_end - wall_start))
+  finalize_metrics
   printf '{"ok":true,"width":%s,"height":%s,"variants":[{"variant":"master","file":"master.jpg","mime":"image/jpeg","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"preview-640","file":"preview-640.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
-    "$mw" "$mh" "$mb" "$mw" "$mh" "$(sha256_file "$OUT_DIR/master.jpg")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/preview-640.webp")" "$wall" "$peak_rss" >"$OUT_DIR/result.json"
+    "$mw" "$mh" "$mb" "$mw" "$mh" "$(sha256_file "$OUT_DIR/master.jpg")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/preview-640.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
 }
 
 derive_video() {
@@ -111,9 +133,9 @@ derive_video() {
     vf="zscale=transfer=linear,tonemap=tonemap=hable:desat=0,zscale=transfer=bt709:matrix=bt709:primaries=bt709,format=yuv420p,$vf"
   fi
 
-  ffmpeg -nostdin -y -i "$src" \
+  ffmpeg -nostdin -y -threads 1 -i "$src" \
     -map 0:v:0? -map 0:a:0? \
-    -c:v libx264 -crf 23 -preset medium -vf "$vf" -r 30 \
+    -c:v libx264 -crf 23 -preset veryfast -threads 1 -vf "$vf" -r 30 \
     -c:a aac -b:a 128k -movflags +faststart \
     "$OUT_DIR/video.mp4" 2>"$WORK/ffmpeg.log" || fail transcode "Не удалось обработать видео"
 
@@ -132,10 +154,9 @@ derive_video() {
   pw="${pw:-0}"
   ph="${ph:-0}"
 
-  wall_end=$(date +%s)
-  wall=$((wall_end - wall_start))
+  finalize_metrics
   printf '{"ok":true,"width":%s,"height":%s,"duration_ms":%s,"variants":[{"variant":"video","file":"video.mp4","mime":"video/mp4","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"poster","file":"poster.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
-    "$vw" "$vh" "$dur_ms" "$vb" "$vw" "$vh" "$(sha256_file "$OUT_DIR/video.mp4")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/poster.webp")" "$wall" "$peak_rss" >"$OUT_DIR/result.json"
+    "$vw" "$vh" "$dur_ms" "$vb" "$vw" "$vh" "$(sha256_file "$OUT_DIR/video.mp4")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/poster.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
 }
 
 case "$KIND" in

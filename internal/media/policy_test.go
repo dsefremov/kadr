@@ -52,11 +52,14 @@ func TestSniffKindFixtures(t *testing.T) {
 			t.Fatalf("%s: %q %v", name, k, err)
 		}
 	}
-	mov := filepath.Join(root, "sample.mov")
-	if _, err := os.Stat(mov); err == nil {
-		k, err := SniffKind(mov)
+	for _, name := range []string{"sample.mov", "benchmark-hdr-hlg.mov"} {
+		p := filepath.Join(root, name)
+		if _, err := os.Stat(p); err != nil {
+			continue
+		}
+		k, err := SniffKind(p)
 		if err != nil || k != "video" {
-			t.Fatalf("mov: %q %v", k, err)
+			t.Fatalf("%s: %q %v", name, k, err)
 		}
 	}
 }

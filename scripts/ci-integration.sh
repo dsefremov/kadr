@@ -68,6 +68,7 @@ fi
 
 docker compose run --rm --no-deps -e FIXTURES_DIR=/fixtures/in media-runner smoke
 ./scripts/ci-media-pipeline.sh
+./scripts/ci-media-benchmarks.sh
 ./scripts/ci-timeline-smoke.sh
 
 ./scripts/measure-memory.sh | tee /tmp/kadr-memory.txt

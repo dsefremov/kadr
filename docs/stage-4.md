@@ -17,9 +17,11 @@
 
 | File | Source | License |
 |------|--------|---------|
-| `fixtures/in/sample.heic` | [nokiatech/heif](https://github.com/nokiatech/heif) conformance examples | BSD-3-Clause |
-| `fixtures/in/sample.mov` | [apple/media](https://github.com/apple/media) HEVC sample (`SampleHEVC`) | Apple sample terms (refer to repo) |
-| `fixtures/in/sample.png` | Generated minimal PNG for CI | CC0 / project-owned |
+| `fixtures/in/sample.heic` | `fixtures/generate-fixtures.sh` → `heif-enc` in media-runner | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `fixtures/in/sample.mov` | ffmpeg `testsrc2` + `sine` (2 s) | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `fixtures/in/benchmark-hdr-hlg.mov` | ffmpeg HLG BT.2020, 1080p×30 s | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `fixtures/in/photo-24mp.jpg` | ffmpeg `testsrc2` 6000×4000 | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `fixtures/in/sample.png` | ffmpeg solid color 64×64 | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 ## Screenshots (Playwright + axe)
 
@@ -40,27 +42,28 @@
 | Derive idempotency | On tus-complete, reset `derive:{upload_id}` to **pending**; retry if upload not yet `complete` |
 | Preview sizes | WebP **640** in v1 (320/1280 deferred) |
 | EXIF dates | `taken_sort` = upload time (EXIF in stage 16) |
+| Runner RSS cap | `VIPS_CONCURRENCY=1`, libvips cache 64 MiB, ffmpeg/x264 **-threads 1** |
 
 ## Known limitations
 
-- Runner peak RSS logged in `result.json`; no continuous profiling in CI artifact yet.
+- Peak memory from cgroup `memory.peak` + `VmHWM` in `derive.sh` `metrics.peak_rss_kb` (per one-off derive container).
 - `preview-320` / `preview-1280` not generated (spec lists; stage 4 ships 640).
 - Dedup unique constraint — second upload frees reserve silently (no duplicate UI).
 - Video two-pass / nightly recompress not implemented.
 
-## Processing memory / time (smoke + derive script)
+## Processing memory / time
 
-Measured on CI runner via `scripts/measure-memory.sh` and `derive.sh` `metrics` field:
+**Peak derive jobs** (`scripts/ci-media-benchmarks.sh`, compose **768 MiB** limit, `VIPS_CONCURRENCY=1`, ffmpeg `-threads 1`):
 
-| Asset | Wall time (approx.) | Notes |
-|-------|---------------------|-------|
-| HEIC → JPEG+WebP (smoke) | <15 s | libvips |
-| MOV → H.264 (smoke) | <30 s | ffmpeg single pass |
-| sample.png derive | <5 s | CI `ci-media-pipeline.sh` |
+| Asset | Kind | Wall (s) | Peak RSS (MiB) | Under 768 MiB |
+|-------|------|----------|----------------|---------------|
+| `sample.heic` | photo | 1 | **40.9** | yes |
+| `photo-24mp.jpg` (6000×4000 → 3200) | photo | 1 | **49.2** | yes |
+| `benchmark-hdr-hlg.mov` (HLG 1080p, 30 s → SDR H.264) | video | 93 | **493.6** | yes |
 
-Under **768 MiB** media-runner limit in compose; single job at a time.
+Artifact on CI: `media-benchmarks` → `/tmp/kadr-benchmarks.tsv` (values from final green run).
 
-**CI idle RSS** (integration stack, `measure-memory.sh` on run 42809412149): api **41.3** MiB, worker **2.1** MiB, media-runner **1.0** MiB, mysql **443** MiB (limit 512 MiB), proxy **3.4** MiB — derive/transcode peaks stay within media-runner **768 MiB** cap during smoke/derive jobs.
+**Idle stack RSS** (`scripts/measure-memory.sh`, containers waiting): api ~41 MiB, worker ~2 MiB, media-runner ~1 MiB, mysql ~443 MiB (limit 512 MiB), proxy ~3 MiB — not transcode peaks.
 
 ## Tests
 
@@ -82,5 +85,5 @@ Integration: `ci-media-pipeline.sh`, `ci-timeline-smoke.sh` (timeline **items≥
 
 1. **Preview ladder (320/640/1280)** — Proposal: add 320+1280 in stage 5 when timeline layout stabilizes.
 2. **Duplicate upload UX** — Proposal: `409` + link to existing media id (spec §12).
-3. **HEIC HDR stills** — Proposal: rely on libvips tone-map; add golden HDR fixture before release.
+3. **HEIC HDR stills** — Proposal: CC0 `sample.heic` is SDR smoke; HDR video covered by `benchmark-hdr-hlg.mov`; add HDR **photo** golden when libvips tone-map path is nailed down.
 4. **Flatten consent endpoint** — Proposal: defer until designer flow for PNG preview (spec §17 optional).
