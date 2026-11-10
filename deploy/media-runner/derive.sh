@@ -98,25 +98,41 @@ derive_photo() {
 
   vips thumbnail "$src" "$WORK/thumb.v" 3200 --size=both --no-rotate
   vips copy "$WORK/thumb.v" "$OUT_DIR/master.jpg[Q=85,strip]"
-  vips thumbnail "$src" "$WORK/prev.v" 640 --size=both --no-rotate
-  vips copy "$WORK/prev.v" "$OUT_DIR/preview-640.webp[Q=80,strip]"
+  vips thumbnail "$src" "$WORK/p320.v" 320 --size=both --no-rotate
+  vips copy "$WORK/p320.v" "$OUT_DIR/preview-320.webp[Q=80,strip]"
+  vips thumbnail "$src" "$WORK/p640.v" 640 --size=both --no-rotate
+  vips copy "$WORK/p640.v" "$OUT_DIR/preview-640.webp[Q=80,strip]"
+  vips thumbnail "$src" "$WORK/p1280.v" 1280 --size=both --no-rotate
+  vips copy "$WORK/p1280.v" "$OUT_DIR/preview-1280.webp[Q=80,strip]"
 
   dim_line="$(dims "$OUT_DIR/master.jpg")"
   mw="${dim_line%% *}"
   mh="${dim_line#* }"
   mw="${mw:-0}"
   mh="${mh:-0}"
-  prev_line="$(dims "$OUT_DIR/preview-640.webp")"
-  pw="${prev_line%% *}"
-  ph="${prev_line#* }"
-  pw="${pw:-0}"
-  ph="${ph:-0}"
+  p320_line="$(dims "$OUT_DIR/preview-320.webp")"
+  p320w="${p320_line%% *}"; p320h="${p320_line#* }"
+  p320w="${p320w:-0}"; p320h="${p320h:-0}"
+  p640_line="$(dims "$OUT_DIR/preview-640.webp")"
+  p640w="${p640_line%% *}"; p640h="${p640_line#* }"
+  p640w="${p640w:-0}"; p640h="${p640h:-0}"
+  p1280_line="$(dims "$OUT_DIR/preview-1280.webp")"
+  p1280w="${p1280_line%% *}"; p1280h="${p1280_line#* }"
+  p1280w="${p1280w:-0}"; p1280h="${p1280h:-0}"
   mb=$(wc -c <"$OUT_DIR/master.jpg")
-  pb=$(wc -c <"$OUT_DIR/preview-640.webp")
+  b320=$(wc -c <"$OUT_DIR/preview-320.webp")
+  b640=$(wc -c <"$OUT_DIR/preview-640.webp")
+  b1280=$(wc -c <"$OUT_DIR/preview-1280.webp")
 
   finalize_metrics
-  printf '{"ok":true,"width":%s,"height":%s,"variants":[{"variant":"master","file":"master.jpg","mime":"image/jpeg","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"preview-640","file":"preview-640.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
-    "$mw" "$mh" "$mb" "$mw" "$mh" "$(sha256_file "$OUT_DIR/master.jpg")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/preview-640.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
+  printf '%s' \
+    "{\"ok\":true,\"width\":$mw,\"height\":$mh,\"variants\":[" \
+    "{\"variant\":\"master\",\"file\":\"master.jpg\",\"mime\":\"image/jpeg\",\"bytes\":$mb,\"width\":$mw,\"height\":$mh,\"sha256_hex\":\"$(sha256_file "$OUT_DIR/master.jpg")\"}," \
+    "{\"variant\":\"preview-320\",\"file\":\"preview-320.webp\",\"mime\":\"image/webp\",\"bytes\":$b320,\"width\":$p320w,\"height\":$p320h,\"sha256_hex\":\"$(sha256_file "$OUT_DIR/preview-320.webp")\"}," \
+    "{\"variant\":\"preview-640\",\"file\":\"preview-640.webp\",\"mime\":\"image/webp\",\"bytes\":$b640,\"width\":$p640w,\"height\":$p640h,\"sha256_hex\":\"$(sha256_file "$OUT_DIR/preview-640.webp")\"}," \
+    "{\"variant\":\"preview-1280\",\"file\":\"preview-1280.webp\",\"mime\":\"image/webp\",\"bytes\":$b1280,\"width\":$p1280w,\"height\":$p1280h,\"sha256_hex\":\"$(sha256_file "$OUT_DIR/preview-1280.webp")\"}" \
+    "],\"metrics\":{\"wall_seconds\":$DERIVE_WALL,\"peak_rss_kb\":$DERIVE_PEAK_RSS_KB}}" \
+    >"$OUT_DIR/result.json"
 }
 
 derive_video() {

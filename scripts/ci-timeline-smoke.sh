@@ -48,13 +48,35 @@ for _ in $(seq 1 90); do
   N=$(curl -fsS -b "$COOKIE" "$API/api/feeds/$FEED/timeline" | jq '.items | length')
   if [ "$N" -ge 1 ]; then
     echo "timeline smoke ok items=$N"
-    exit 0
+    break
   fi
   sleep 2
 done
-echo "timeline smoke timeout"
-curl -fsS -b "$COOKIE" "$API/api/me/media" 2>/dev/null | jq . || true
-curl -fsS -b "$COOKIE" "$API/api/me/uploads" 2>/dev/null | jq . || true
-docker compose exec -T worker ls -la /spool/in /spool/out 2>&1 | tail -40 || true
-docker compose logs --tail=120 worker media-runner 2>&1 | tail -80
-exit 1
+if [ "${N:-0}" -lt 1 ]; then
+  echo "timeline smoke timeout"
+  curl -fsS -b "$COOKIE" "$API/api/me/media" 2>/dev/null | jq . || true
+  curl -fsS -b "$COOKIE" "$API/api/me/uploads" 2>/dev/null | jq . || true
+  docker compose exec -T worker ls -la /spool/in /spool/out 2>&1 | tail -40 || true
+  docker compose logs --tail=120 worker media-runner 2>&1 | tail -80
+  exit 1
+fi
+
+TL=$(curl -fsS -b "$COOKIE" "$API/api/feeds/$FEED/timeline")
+echo "$TL" | jq -e '.items[0].urls.preview_320 and .items[0].urls.preview_640 and .items[0].urls.preview_1280' >/dev/null
+
+HEADERS2=$(mktemp)
+curl -fsS -b "$COOKIE" -X POST "$API/api/uploads" \
+  -H "Upload-Length: $FILE" \
+  -H 'Tus-Resumable: 1.0.0' \
+  -H 'Upload-Metadata: filetype cGhvdG8=' \
+  -D "$HEADERS2" -o /dev/null
+LOC2=$(grep -i '^location:' "$HEADERS2" | awk '{print $2}' | tr -d '\r')
+ID2="${LOC2##*/}"
+rm -f "$HEADERS2"
+DUP_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-dup.json -w '%{http_code}' \
+  -X PATCH "$API/api/uploads/$ID2" \
+  -H "Upload-Offset: 0" -H "Tus-Resumable: 1.0.0" \
+  --data-binary @fixtures/in/sample.png)
+[ "$DUP_CODE" = "409" ] || { echo "duplicate upload expected 409 got $DUP_CODE"; cat /tmp/kadr-dup.json; exit 1; }
+jq -e '.error == "duplicate" and .media_id != "" and (.preview_url | test("preview-640"))' /tmp/kadr-dup.json >/dev/null
+echo "duplicate upload smoke ok"
