@@ -67,9 +67,9 @@ Integration: `ci-media-pipeline.sh` (three previews), `ci-timeline-smoke.sh` (la
 
 ## CI
 
-**Head:** `4bd4645da7236b5ea24fe9a460548a93e0b08bde`
+**Head:** `0e16ba543b1a8fd8138b7835fdad0ac95a53ca52`
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42876882285 (`go-backend`, `web`, `docker-integration`).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42878768488 (`go-backend`, `web`, `docker-integration`).
 
 PR [#7](https://github.com/dsefremov/kadr/pull/7) `grok_bot` → `develop`. Workflow unchanged.
 
