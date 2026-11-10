@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
+	"github.com/dsefremov/kadr/internal/media"
 	"github.com/dsefremov/kadr/internal/session"
 	"github.com/dsefremov/kadr/internal/upload"
 )
@@ -62,8 +64,8 @@ func maxSize(kind string) int64 {
 }
 
 func (s *Server) uploadLocation(publicID string) string {
-	base := strings.TrimSuffix(s.opts.PublicURL, "/")
-	return base + "/api/uploads/" + publicID
+	// Relative URL keeps tus PATCH on the page origin (vite preview, nginx, etc.).
+	return "/api/uploads/" + publicID
 }
 
 func (s *Server) headUpload(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +106,19 @@ func (s *Server) patchUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	id := r.PathValue("id")
 	row, err := s.uploads.Patch(r.Context(), id, sess.UserID, off, r.Body)
+	var dup *upload.DuplicateMediaError
+	if errors.As(err, &dup) {
+		ph := media.ProfileHashV1SDR
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error":        "duplicate",
+			"media_id":     dup.MediaPublicID,
+			"media_state":  dup.MediaState,
+			"preview_url":  fmt.Sprintf("/m/%s/preview-640.%s", dup.MediaPublicID, ph),
+			"timeline_url": fmt.Sprintf("/api/feeds/%s/timeline", s.feedPublicIDForUser(r.Context(), sess.UserID)),
+		})
+		w.Header().Set("Tus-Resumable", upload.TusVersion)
+		return
+	}
 	if errors.Is(err, upload.ErrNotFound) {
 		http.NotFound(w, r)
 		return
@@ -168,6 +183,12 @@ func (s *Server) listMyUploads(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"uploads": out})
+}
+
+func (s *Server) feedPublicIDForUser(ctx context.Context, userID int64) string {
+	var pub string
+	_ = s.db.QueryRowContext(ctx, `SELECT public_id FROM feeds WHERE owner_id = ?`, userID).Scan(&pub)
+	return pub
 }
 
 func (s *Server) requireVerified(w http.ResponseWriter, r *http.Request) *session.Data {

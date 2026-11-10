@@ -1,8 +1,46 @@
 import * as tus from 'tus-js-client'
+import type { DetailedError } from 'tus-js-client'
+
+export type DuplicateUploadBody = {
+  error: string
+  media_id: string
+  media_state?: string
+  preview_url: string
+  timeline_url?: string
+}
+
+export class DuplicateUploadError extends Error {
+  body: DuplicateUploadBody
+  constructor(body: DuplicateUploadBody) {
+    super('duplicate upload')
+    this.body = body
+  }
+}
 
 export type TusUploadHandlers = {
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void
   onError?: (err: Error) => void
+}
+
+function duplicateResponseText(err: Error): string {
+  const res = (err as DetailedError).originalResponse
+  const body = res?.getBody?.() ?? ''
+  if (body) return body
+  const m = err.message.match(/response text: (\{.*\}), request id/)
+  return m?.[1] ?? ''
+}
+
+function tryParseDuplicate(err: Error): DuplicateUploadError | null {
+  const status = (err as DetailedError).originalResponse?.getStatus() ?? 0
+  const text = duplicateResponseText(err)
+  if (status !== 409 && !text.includes('"duplicate"')) return null
+  try {
+    const body = JSON.parse(text) as DuplicateUploadBody
+    if (body?.error === 'duplicate' && body.media_id) return new DuplicateUploadError(body)
+  } catch {
+    return null
+  }
+  return null
 }
 
 export type TusUploadControl = {
@@ -44,6 +82,7 @@ export function createTusUpload(
     headers: {},
     storeFingerprintForResuming: true,
     removeFingerprintOnSuccess: true,
+    onShouldRetry: (err) => tryParseDuplicate(err) === null,
     onProgress: (uploaded, total) => handlers.onProgress?.(uploaded, total),
     onSuccess: () => {
       const url = upload.url ?? ''
@@ -55,6 +94,12 @@ export function createTusUpload(
       resolve(id)
     },
     onError: (err) => {
+      const dup = tryParseDuplicate(err)
+      if (dup) {
+        handlers.onError?.(dup)
+        reject(dup)
+        return
+      }
       handlers.onError?.(err)
       reject(err)
     },

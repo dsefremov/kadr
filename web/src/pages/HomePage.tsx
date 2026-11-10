@@ -3,7 +3,12 @@ import { Link } from 'react-router-dom'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Shell } from '../components/Shell'
 import { Timeline } from '../components/Timeline'
-import { createTusUpload, tusResumeFromUrl, type TusUploadControl } from '../lib/tusUpload'
+import {
+  createTusUpload,
+  DuplicateUploadError,
+  tusResumeFromUrl,
+  type TusUploadControl,
+} from '../lib/tusUpload'
 
 type Me = {
   email: string
@@ -28,6 +33,7 @@ export function HomePage() {
   const [me, setMe] = useState<Me | null>(null)
   const [guest, setGuest] = useState(false)
   const [uploadMsg, setUploadMsg] = useState('')
+  const [uploadDupUrl, setUploadDupUrl] = useState<string | null>(null)
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [timelineItems, setTimelineItems] = useState<
     { id: string; kind: string; width?: number; height?: number; urls?: Record<string, string> }[]
@@ -131,6 +137,7 @@ export function HomePage() {
 
   async function runUpload(file: File, resume?: PendingUpload) {
     setUploadMsg('')
+    setUploadDupUrl(null)
     setUploadPct(0)
     const kind = (file.type.startsWith('video/') ? 'video' : 'photo') as 'photo' | 'video'
     const kindFromServer = resume?.kind === 'video' ? 'video' : 'photo'
@@ -158,7 +165,15 @@ export function HomePage() {
       activeRef.current = null
       loadPending()
       refreshTimeline()
-    } catch {
+    } catch (e) {
+      if (e instanceof DuplicateUploadError) {
+        setUploadPct(null)
+        setUploadDupUrl(e.body.preview_url)
+        setUploadMsg('Этот файл уже есть в вашей ленте.')
+        refreshTimeline()
+        loadPending()
+        return
+      }
       setUploadMsg('Не удалось загрузить файл')
       setUploadPct(null)
       loadPending()
@@ -236,7 +251,19 @@ export function HomePage() {
                 <span className="note">{uploadPct}%</span>
               </div>
             ) : null}
-            {uploadMsg ? <p className="note" data-testid="upload-message">{uploadMsg}</p> : null}
+            {uploadMsg ? (
+              <p className="note" data-testid={uploadDupUrl ? 'upload-duplicate' : 'upload-message'}>
+                {uploadMsg}
+                {uploadDupUrl ? (
+                  <>
+                    {' '}
+                    <a href={uploadDupUrl} data-testid="upload-duplicate-link">
+                      Открыть превью
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
           </div>
           {pendingUploads.length > 0 ? (
             <div className="note" data-testid="pending-uploads">
