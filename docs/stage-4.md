@@ -67,7 +67,7 @@ Source: CI artifact `media-benchmarks` (`derive.sh` → `metrics.peak_rss_kb`, c
 
 ## Tests
 
-| Suite | Count (`09e7a37`) |
+| Suite | Count (`cb4ca71`) |
 |-------|-------------------|
 | Go `-race` | **19** `Test*` functions (`go test ./... -race`) |
 | Vitest | **3** |
@@ -77,9 +77,9 @@ Integration: `ci-media-pipeline.sh`, `ci-timeline-smoke.sh` (timeline **items≥
 
 ## CI
 
-**Head:** `09e7a37c2657cd424273914faa289f22f16133c0`
+**Head:** `cb4ca71fd0f9f6f05ea8d4b45fb95f05f9501da6`
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42829834312 (`go-backend`, `web`, `docker-integration`).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42831699113 (`go-backend`, `web`, `docker-integration`).
 
 ## Open questions (with proposal)
 
