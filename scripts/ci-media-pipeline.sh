@@ -18,7 +18,9 @@ docker compose run --rm --no-deps \
   media-runner derive /job /out
 
 test -s "$OUT/master.jpg"
+test -s "$OUT/preview-320.webp"
 test -s "$OUT/preview-640.webp"
+test -s "$OUT/preview-1280.webp"
 test -s "$OUT/result.json"
 grep -q '"ok":true' "$OUT/result.json"
 echo "media derive pipeline ok"

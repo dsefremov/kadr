@@ -31,6 +31,16 @@ var (
 	ErrInvalidState = errors.New("invalid upload state")
 )
 
+// DuplicateMediaError is returned when the uploaded bytes match existing media (§12).
+type DuplicateMediaError struct {
+	MediaPublicID string
+	MediaState    string
+}
+
+func (e *DuplicateMediaError) Error() string {
+	return "duplicate media"
+}
+
 type Service struct {
 	DB       *sql.DB
 	RootDir  string
@@ -179,6 +189,22 @@ func (s *Service) Patch(ctx context.Context, publicID string, ownerID int64, exp
 	if newOff > row.UploadLength {
 		return nil, ErrLength
 	}
+	if newOff == row.UploadLength {
+		dedup, derr := hashFile(path)
+		if derr != nil {
+			return nil, derr
+		}
+		existingPub, existingState, derr := findExistingMedia(ctx, s.DB, row.OwnerID, dedup, row.UploadLength)
+		if derr != nil {
+			return nil, derr
+		}
+		if existingPub != "" {
+			if err := s.abortDuplicate(ctx, row); err != nil {
+				return nil, err
+			}
+			return nil, &DuplicateMediaError{MediaPublicID: existingPub, MediaState: existingState}
+		}
+	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -233,6 +259,10 @@ func (s *Service) ExpireByID(ctx context.Context, uploadID int64) error {
 		return nil
 	}
 	return s.expireRow(ctx, &row, "expired")
+}
+
+func (s *Service) abortDuplicate(ctx context.Context, row *Row) error {
+	return s.expireRow(ctx, row, "cancelled")
 }
 
 func (s *Service) expireRow(ctx context.Context, row *Row, state string) error {

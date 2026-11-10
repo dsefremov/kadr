@@ -11,7 +11,7 @@ import (
 
 )
 
-const timelineProfileHash = "v1sdr20261110"
+const timelineProfileHash = "v1sdr20261111"
 
 type TimelineItem struct {
 	ID         string            `json:"id"`
@@ -109,8 +109,10 @@ func buildURLs(pub, kind string) map[string]string {
 		}
 	}
 	return map[string]string{
-		"master":      fmt.Sprintf("/m/%s/master.%s", pub, ph),
-		"preview_640": fmt.Sprintf("/m/%s/preview-640.%s", pub, ph),
+		"master":       fmt.Sprintf("/m/%s/master.%s", pub, ph),
+		"preview_320":  fmt.Sprintf("/m/%s/preview-320.%s", pub, ph),
+		"preview_640":  fmt.Sprintf("/m/%s/preview-640.%s", pub, ph),
+		"preview_1280": fmt.Sprintf("/m/%s/preview-1280.%s", pub, ph),
 	}
 }
 
