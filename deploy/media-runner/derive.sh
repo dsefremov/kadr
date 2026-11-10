@@ -5,9 +5,10 @@ set -eu
 JOB_DIR="${1:?job dir}"
 OUT_DIR="${2:-$(dirname "$JOB_DIR")/../out/$(basename "$JOB_DIR")}"
 mkdir -p "$OUT_DIR"
-WORK="$OUT_DIR/work"
+WORK="/tmp/kadr-derive-$$"
 rm -rf "$WORK"
 mkdir -p "$WORK"
+trap 'rm -rf "$WORK"' EXIT
 
 MANIFEST="$JOB_DIR/manifest.json"
 INPUT_REL="$(sed -n 's/.*"input_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST" | head -1)"
@@ -126,5 +127,4 @@ case "$KIND" in
   *) fail unsupported "Неизвестный тип медиа" ;;
 esac
 
-rm -rf "$WORK"
 touch "$OUT_DIR/done"
