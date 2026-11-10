@@ -77,8 +77,10 @@ KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 
 | Item | Value |
 |------|--------|
-| **PR** | _TBD_ `grok_bot` → `develop` |
-| **Green CI (final)** | Head **`_HEAD_`** — [run _RUN_](https://github.com/dsefremov/kadr/actions/runs/_RUN_) (`go-backend`, `web`) |
+| **PR** | [#11](https://github.com/dsefremov/kadr/pull/11) `grok_bot` → `develop` |
+| **Green CI (final)** | Head **`c3215f6`** — [run 42904899706](https://github.com/dsefremov/kadr/actions/runs/42904899706) (`go-backend`, `web`; `docker-integration` skipped on develop PR) |
+
+**Final head (stage 6):** `c3215f6` (implementation `0cb4d2e` + report)
 
 ## Open questions (with proposal)
 
