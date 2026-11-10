@@ -1,6 +1,6 @@
 # Кадр (Kadr)
 
-Private photo and video feed (memories.gallery-style). **Stage 2** completes auth (reset, rate limits, cleanup job), adds **tus** uploads with quota reserve, feed/timeline APIs, and upload UI. **Stage 1** added accounts and email queue; **media processing** is stage 4.
+Private photo and video feed (memories.gallery-style). **Stage 3** adds the public-feed confirmation modal and **tus-js-client** resumable uploads. **Stage 2** added tus API, feed, and auth completion; **media processing** is stage 4.
 
 ## Stack
 
@@ -51,6 +51,7 @@ cd web && PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088 MAILPIT_URL=http://127.0.0.1
 - `docs/stage-0.md` — stage 0 report
 - `docs/stage-1.md` — stage 1 report
 - `docs/stage-2.md` — stage 2 report
+- `docs/stage-3.md` — stage 3 report
 - `docs/resource-limits.md` — VPS memory/CPU budget
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch rules.

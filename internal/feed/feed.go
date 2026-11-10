@@ -58,8 +58,12 @@ func ForOwner(ctx context.Context, db *sql.DB, ownerID int64) (*Meta, error) {
 	return &m, nil
 }
 
+func ValidVisibility(vis string) bool {
+	return vis == "public" || vis == "private"
+}
+
 func SetVisibility(ctx context.Context, db *sql.DB, ownerID int64, vis string) error {
-	if vis != "public" && vis != "private" {
+	if !ValidVisibility(vis) {
 		return fmt.Errorf("invalid visibility")
 	}
 	res, err := db.ExecContext(ctx, `

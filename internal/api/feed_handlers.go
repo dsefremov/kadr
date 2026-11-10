@@ -55,6 +55,9 @@ func (s *Server) getTimeline(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if meta.Visibility == "public" {
+		w.Header().Set("X-Robots-Tag", "noindex")
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	page, err := feed.Timeline(r.Context(), s.db, feedID, r.URL.Query().Get("cursor"), limit)
 	if err != nil {

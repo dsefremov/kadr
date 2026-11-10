@@ -1,20 +1,30 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const start = vi.fn()
+const abort = vi.fn()
+
+vi.mock('tus-js-client', () => ({
+  Upload: vi.fn(function UploadMock(this: { url?: string; start: typeof start; abort: typeof abort }, _file: File, opts: { onSuccess?: () => void }) {
+    this.url = '/api/uploads/testid'
+    this.start = start
+    this.abort = abort
+    start.mockImplementation(() => {
+      queueMicrotask(() => opts.onSuccess?.())
+    })
+  }),
+}))
+
 import { tusUpload } from './tusUpload'
 
 describe('tusUpload', () => {
-  it('creates and patches', async () => {
+  beforeEach(() => {
+    start.mockClear()
+  })
+
+  it('uses tus-js-client and returns upload id', async () => {
     const file = new File(['hello'], 'a.png', { type: 'image/png' })
-    vi.stubGlobal(
-      'fetch',
-      vi.fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          headers: { get: () => '/api/uploads/abc123' },
-        })
-        .mockResolvedValueOnce({ ok: true, headers: { get: () => null } }),
-    )
     const id = await tusUpload(file, 'photo')
-    expect(id).toBe('abc123')
-    vi.unstubAllGlobals()
+    expect(start).toHaveBeenCalled()
+    expect(id).toBe('testid')
   })
 })
