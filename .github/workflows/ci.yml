@@ -4,9 +4,13 @@ on:
   pull_request:
     branches: [develop, main]
   push:
-    branches: [develop]
+    branches:
+      - develop
+      - grok_bot
+  workflow_dispatch:
 
-# grok_bot is validated via pull_request (PR #3); avoid duplicate push+PR runs on the same SHA.
+# Do not share one concurrency group across push and pull_request: both only run go+web
+# on develop PRs, and cancelling by SHA could drop a needed green go/web check.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -64,6 +68,9 @@ jobs:
   docker-integration:
     runs-on: ubuntu-24.04
     needs: [go-backend, web]
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
