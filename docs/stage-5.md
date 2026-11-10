@@ -77,7 +77,7 @@ KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 
 Includes: `ci-media-pipeline.sh`, `ci-media-benchmarks.sh`, `ci-timeline-smoke.sh` (ladder + duplicate 409), `measure-memory.sh`, Playwright is CI-only on Actions unless port 8088 is free.
 
-**Result (2026-11-10, agent VM, head `67e24c1`):**
+**Result (2026-11-10, agent VM, stage 5 code @ `67e24c1` / report @ `362adf8`):**
 
 | Step | Result |
 |------|--------|
@@ -94,13 +94,13 @@ Workflow on this PR still runs all three jobs until [CI PR](https://github.com/d
 
 | Check | Required for stage 5 handoff | On final head |
 |-------|------------------------------|---------------|
-| `go-backend` | yes | green on `67e24c1` ([run 42891576200](https://github.com/dsefremov/kadr/actions/runs/42891576200)) |
-| `web` | yes | green on `67e24c1` (same run) |
-| `docker-integration` | optional (local above) | _in progress or see [42889646457](https://github.com/dsefremov/kadr/actions/runs/42889646457)_ |
+| `go-backend` | yes | green on `362adf8` ([run 42893328275](https://github.com/dsefremov/kadr/actions/runs/42893328275)) |
+| `web` | yes | green on `362adf8` (same run) |
+| `docker-integration` | optional (local above) | also green on prior full run [42889646457](https://github.com/dsefremov/kadr/actions/runs/42889646457) |
 
-**Head:** `67e24c1398f7eaeb527707b7a37660267feccdd6`
+**Head:** `362adf869cf572c0519a943e922d7e4343f2570c`
 
-**Green PR checks (go + web):** https://github.com/dsefremov/kadr/actions/runs/42891576200
+**Green PR checks (go + web):** https://github.com/dsefremov/kadr/actions/runs/42893328275
 
 PR [#7](https://github.com/dsefremov/kadr/pull/7) `grok_bot` → `develop`.
 
