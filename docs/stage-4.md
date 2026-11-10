@@ -57,9 +57,9 @@
 
 | Asset | Kind | Wall (s) | Peak RSS (MiB) | Under 768 MiB |
 |-------|------|----------|----------------|---------------|
-| `sample.heic` | photo | 1 | **34.0** | yes |
-| `photo-24mp.jpg` (6000×4000 → 3200) | photo | 0 | **49.6** | yes |
-| `benchmark-hdr-hlg.mov` (HLG 1080p, 30 s → SDR H.264) | video | 45 | **275.3** | yes |
+| `sample.heic` | photo | 1 | **33.9** | yes |
+| `photo-24mp.jpg` (6000×4000 → 3200) | photo | 1 | **49.5** | yes |
+| `benchmark-hdr-hlg.mov` (HLG 1080p, 30 s → SDR H.264) | video | 51 | **275.6** | yes |
 
 Source: CI artifact `media-benchmarks` (`derive.sh` → `metrics.peak_rss_kb`, cgroup `memory.peak` in one-off `docker run --memory 768m`).
 
@@ -67,7 +67,7 @@ Source: CI artifact `media-benchmarks` (`derive.sh` → `metrics.peak_rss_kb`, c
 
 ## Tests
 
-| Suite | Count (`92590a6`) |
+| Suite | Count (`a1c3adc`) |
 |-------|-------------------|
 | Go `-race` | **19** `Test*` functions (`go test ./... -race`) |
 | Vitest | **3** |
@@ -77,9 +77,9 @@ Integration: `ci-media-pipeline.sh`, `ci-timeline-smoke.sh` (timeline **items≥
 
 ## CI
 
-**Head:** `92590a6190871b6e0983599ac4272e8cae932da3`
+**Head:** `a1c3adc63d9e67d20b3109b88d7bcf6be372c621`
 
-**Green run:** https://github.com/dsefremov/kadr/actions/runs/42833725196 (`go-backend`, `web`, `docker-integration`).
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42835310038 (`go-backend`, `web`, `docker-integration`).
 
 ## Open questions (with proposal)
 
