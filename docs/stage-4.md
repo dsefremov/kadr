@@ -37,6 +37,7 @@
 | Spool | Shared `media_spool` volume; worker writes, runner watches |
 | Permanent errors | Job completes (no retry) for animated/unsupported/length |
 | Transient errors | Spool timeout → job retry via queue |
+| Derive idempotency | On tus-complete, reset `derive:{upload_id}` to **pending**; retry if upload not yet `complete` |
 | Preview sizes | WebP **640** in v1 (320/1280 deferred) |
 | EXIF dates | `taken_sort` = upload time (EXIF in stage 16) |
 
@@ -59,17 +60,23 @@ Measured on CI runner via `scripts/measure-memory.sh` and `derive.sh` `metrics` 
 
 Under **768 MiB** media-runner limit in compose; single job at a time.
 
+**CI idle RSS** (integration stack, `measure-memory.sh` on run 42809412149): api **41.3** MiB, worker **2.1** MiB, media-runner **1.0** MiB, mysql **443** MiB (limit 512 MiB), proxy **3.4** MiB — derive/transcode peaks stay within media-runner **768 MiB** cap during smoke/derive jobs.
+
 ## Tests
 
-| Suite | Count (final head _TBD_) |
-|-------|--------------------------|
-| Go `-race` | _TBD_ test functions |
-| Vitest | _TBD_ |
-| Playwright + axe | _TBD_ |
+| Suite | Count (`e497bdf`) |
+|-------|-------------------|
+| Go `-race` | **19** `Test*` functions (`go test ./... -race`) |
+| Vitest | **3** |
+| Playwright + axe | **28** passed (stage 2–4 specs, 1 worker) |
+
+Integration: `ci-media-pipeline.sh`, `ci-timeline-smoke.sh` (timeline **items≥1**), `measure-memory.sh`.
 
 ## CI
 
-**Green run:** _TBD_ (`go-backend`, `web`, `docker-integration` with derive script + Playwright stage 4).
+**Head:** `e497bdf193d6b9a956c74f463488fe0ad8790e05`
+
+**Green run:** https://github.com/dsefremov/kadr/actions/runs/42809412149 (`go-backend`, `web`, `docker-integration`).
 
 ## Open questions (with proposal)
 
