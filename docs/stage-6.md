@@ -21,6 +21,7 @@ CC0 набор stage 4–5. **HDR HEIC golden** — не добавлен (не�
 |---|---|
 | ![Trash](screenshots/trash-desktop-1440.png) | ![Trash mobile](screenshots/trash-mobile-390.png) |
 | ![Quota warning](screenshots/quota-warning-desktop-1440.png) | ![Quota warning mobile](screenshots/quota-warning-mobile-390.png) |
+| ![Quota exceeded](screenshots/quota-exceeded-desktop-1440.png) | ![Quota exceeded mobile](screenshots/quota-exceeded-mobile-390.png) |
 
 ## Decisions made
 
@@ -65,7 +66,7 @@ CC0 набор stage 4–5. **HDR HEIC golden** — не добавлен (не�
 |-------|------------------------|
 | Go packages | 12+ (incl. `quota`, trash disk/quota tests) |
 | Vitest | **3** |
-| Playwright + axe | stage 2–6 + quota/account specs |
+| Playwright + axe | **22** (stage 6 trash/quota/account, 1440+390, axe) |
 
 Integration: `ci-timeline-smoke.sh` — duplicate, trash, **purge forever**, re-upload.
 
@@ -76,19 +77,22 @@ export COMPOSE_PROFILES=dev
 KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 ```
 
-| Step | Result (agent VM, full pass) |
-|------|------------------------------|
-| migrate **v6** + ready | OK (gateway DSN при необходимости) |
+| Step | Result (agent VM, 2026-11-10) |
+|------|-------------------------------|
+| `ci-integration.sh` (compose up) | OK; **:8088** занят vite → proxy skip; gateway DSN для migrate |
+| `media-runner smoke` | OK до HDR ffmpeg; **HDR transcode Killed** (OOM на VM) |
 | `ci-media-pipeline.sh` | OK |
-| `ci-timeline-smoke.sh` | OK (purge + re-upload) |
-| Playwright stage 6* | OK via `vite preview :8088` → API `:8080` |
+| `ci-media-benchmarks.sh` | **Не завершён** (тот же HDR job; cap 768 MiB) |
+| `ci-timeline-smoke.sh` | OK (trash → **purge forever** → re-upload) |
+| Playwright stage 6 | **22/22** (proxy/nginx `:8088` или preview после smoke) |
+| `measure-memory.sh` | api ~42 MiB, worker ~2 MiB idle (см. `/tmp/kadr-memory.txt`) |
 
 ## CI (PR → develop)
 
 | Item | Value |
 |------|--------|
-| **PR** | [#11](https://github.com/dsefremov/kadr/pull/11) |
-| **Green CI (final)** | Head **`_HEAD_`** — [run _RUN_](https://github.com/dsefremov/kadr/actions/runs/_RUN_) (`go-backend`, `web`) |
+| **PR** | [#12](https://github.com/dsefremov/kadr/pull/12) |
+| **Green CI (final)** | Head **`59a3b07`** — [run 42911354496](https://github.com/dsefremov/kadr/actions/runs/42911354496) (`go-backend`, `web`) |
 
 ## Open questions (with proposal)
 
