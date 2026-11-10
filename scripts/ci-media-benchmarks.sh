@@ -9,21 +9,32 @@ RESULTS="$OUT_ROOT/results.tsv"
 mkdir -p "$OUT_ROOT"
 printf "asset\tkind\twall_seconds\tpeak_rss_kb\tpeak_mib\n" >"$RESULTS"
 
+RUNNER_IMAGE="$(docker compose images -q media-runner 2>/dev/null | head -1)"
+if [ -z "$RUNNER_IMAGE" ]; then
+  docker compose build media-runner
+  RUNNER_IMAGE="$(docker compose images -q media-runner | head -1)"
+fi
+
 run_derive() {
   local label="$1" kind="$2" src="$3"
   local jobdir="$OUT_ROOT/job-$label"
   local outdir="$OUT_ROOT/out-$label"
   rm -rf "$jobdir" "$outdir"
   mkdir -p "$jobdir" "$outdir"
+  chmod -R a+rwX "$jobdir" "$outdir"
   ext="${src##*.}"
   cp "$src" "$jobdir/input.$ext"
   printf '{"job_id":"%s","kind":"%s","input_name":"input.%s"}\n' "$label" "$kind" "$ext" >"$jobdir/manifest.json"
 
-  docker compose run --rm --no-deps \
+  # One-off run without compose read_only:root (that mount makes bind /out read-only).
+  docker run --rm --network none \
+    --memory 768m --memory-swap 768m \
+    -u 0:0 \
+    --tmpfs /tmp:rw,nosuid,size=256m \
     -v "$jobdir:/job:ro" \
     -v "$outdir:/out:rw" \
     --entrypoint /opt/kadr/derive.sh \
-    media-runner /job /out
+    "$RUNNER_IMAGE" /job /out
 
   test -s "$outdir/result.json"
   grep -q '"ok":true' "$outdir/result.json"
@@ -42,7 +53,6 @@ run_derive "heic" photo "$FIX/sample.heic"
 run_derive "photo-24mp" photo "$FIX/photo-24mp.jpg"
 run_derive "hdr-hlg-1080p30" video "$FIX/benchmark-hdr-hlg.mov"
 
-# Fail CI if peak exceeds 768 MiB cap (with small headroom for metrics noise).
 limit_kb=$((768 * 1024))
 while IFS=$'\t' read -r label _ _ pk _; do
   [ "$label" = asset ] && continue
