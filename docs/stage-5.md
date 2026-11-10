@@ -76,7 +76,7 @@ Full Playwright matrix (all stages) not re-run locally in this turn; stage 5 spe
 | **Last full green CI on repo** | Merge **PR #6** → `develop` @ **`c722293`** — [run 42837503467](https://github.com/dsefremov/kadr/actions/runs/42837503467) (go-backend, web, docker-integration) |
 | **CI on this stage-5 head** | **Not run** — Actions jobs for `dsefremov` currently fail in ~2–3s without a runner (billing; Den investigating). Verified **locally** on commit below instead. |
 
-**Final head (stage 5 PR):** `42e9a8e`
+**Final head (stage 5 PR):** `a30efc1`
 
 ## Open questions (with proposal)
 
