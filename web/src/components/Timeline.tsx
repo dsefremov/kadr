@@ -22,9 +22,10 @@ type ProcessingItem = {
 type Props = {
   items: TimelineItem[]
   processing: ProcessingItem[]
+  onTrash?: (id: string) => void
 }
 
-export function Timeline({ items, processing }: Props) {
+export function Timeline({ items, processing, onTrash }: Props) {
   return (
     <section className="timeline" data-testid="timeline">
       {processing.length > 0 ? (
@@ -65,10 +66,22 @@ export function Timeline({ items, processing }: Props) {
               ) : (
                 <div className="timeline-thumb placeholder" />
               )}
-              <span className="note">
-                {it.kind}
-                {it.width && it.height ? ` ${it.width}×${it.height}` : ''}
-              </span>
+              <div className="timeline-meta">
+                <span className="note">
+                  {it.kind}
+                  {it.width && it.height ? ` ${it.width}×${it.height}` : ''}
+                </span>
+                {onTrash ? (
+                  <button
+                    type="button"
+                    className="btn sm danger"
+                    data-testid={`trash-item-${it.id}`}
+                    onClick={() => onTrash(it.id)}
+                  >
+                    В корзину
+                  </button>
+                ) : null}
+              </div>
             </article>
           )
         })}

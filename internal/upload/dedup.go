@@ -23,16 +23,38 @@ func hashFile(path string) ([32]byte, error) {
 	return sum, nil
 }
 
-func findExistingMedia(ctx context.Context, db *sql.DB, ownerID int64, dedup [32]byte, sourceBytes uint64) (publicID, state string, err error) {
-	err = db.QueryRowContext(ctx, `
+type dedupHit struct {
+	publicID string
+	state    string
+	inTrash  bool
+}
+
+func findExistingMedia(ctx context.Context, db *sql.DB, ownerID int64, dedup [32]byte, sourceBytes uint64) (*dedupHit, error) {
+	var pub, state string
+	err := db.QueryRowContext(ctx, `
 		SELECT public_id, state FROM media
 		WHERE owner_id = ? AND dedup_sha256 = ? AND source_bytes = ?
 		  AND trashed_at IS NULL
 		  AND state IN ('processing', 'ready', 'waiting_quota')
 		ORDER BY id DESC LIMIT 1`,
-		ownerID, dedup[:], sourceBytes).Scan(&publicID, &state)
-	if err == sql.ErrNoRows {
-		return "", "", nil
+		ownerID, dedup[:], sourceBytes).Scan(&pub, &state)
+	if err == nil {
+		return &dedupHit{publicID: pub, state: state}, nil
 	}
-	return publicID, state, err
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+	err = db.QueryRowContext(ctx, `
+		SELECT public_id, state FROM media
+		WHERE owner_id = ? AND dedup_sha256 = ? AND source_bytes = ?
+		  AND trashed_at IS NOT NULL
+		ORDER BY id DESC LIMIT 1`,
+		ownerID, dedup[:], sourceBytes).Scan(&pub, &state)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &dedupHit{publicID: pub, state: state, inTrash: true}, nil
 }

@@ -109,13 +109,21 @@ func (s *Server) patchUpload(w http.ResponseWriter, r *http.Request) {
 	var dup *upload.DuplicateMediaError
 	if errors.As(err, &dup) {
 		ph := media.ProfileHashV1SDR
-		writeJSON(w, http.StatusConflict, map[string]any{
-			"error":        "duplicate",
+		errCode := "duplicate"
+		if dup.InTrash {
+			errCode = "duplicate_in_trash"
+		}
+		body := map[string]any{
+			"error":        errCode,
 			"media_id":     dup.MediaPublicID,
 			"media_state":  dup.MediaState,
 			"preview_url":  fmt.Sprintf("/m/%s/preview-640.%s", dup.MediaPublicID, ph),
 			"timeline_url": fmt.Sprintf("/api/feeds/%s/timeline", s.feedPublicIDForUser(r.Context(), sess.UserID)),
-		})
+		}
+		if dup.InTrash {
+			body["restore_url"] = fmt.Sprintf("/api/media/%s/restore", dup.MediaPublicID)
+		}
+		writeJSON(w, http.StatusConflict, body)
 		w.Header().Set("Tus-Resumable", upload.TusVersion)
 		return
 	}

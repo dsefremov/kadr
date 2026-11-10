@@ -44,6 +44,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerFeedRoutes(mux)
 	s.registerUploadRoutes(mux)
 	s.registerMediaRoutes(mux)
+	s.registerTrashRoutes(mux)
 	return mux
 }
 

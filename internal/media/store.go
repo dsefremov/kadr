@@ -244,7 +244,7 @@ func VariantPath(ctx context.Context, db *sql.DB, mediaPublicID, variant, profil
 func ListByOwner(ctx context.Context, db *sql.DB, ownerID int64, state string) ([]Row, error) {
 	q := `
 		SELECT id, public_id, feed_id, owner_id, kind, state, width, height, duration_ms, taken_sort, error_code, error_message
-		FROM media WHERE owner_id = ?`
+		FROM media WHERE owner_id = ? AND trashed_at IS NULL`
 	args := []any{ownerID}
 	if state != "" {
 		q += ` AND state = ?`

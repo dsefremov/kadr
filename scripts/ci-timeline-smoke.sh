@@ -80,3 +80,15 @@ DUP_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-dup.json -w '%{http_code}' \
 [ "$DUP_CODE" = "409" ] || { echo "duplicate upload expected 409 got $DUP_CODE"; cat /tmp/kadr-dup.json; exit 1; }
 jq -e '.error == "duplicate" and .media_id != "" and (.preview_url | test("preview-640"))' /tmp/kadr-dup.json >/dev/null
 echo "duplicate upload smoke ok"
+
+MEDIA_ID=$(echo "$TL" | jq -r '.items[0].id')
+TRASH_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-trash.json -w '%{http_code}' \
+  -X POST "$API/api/media/$MEDIA_ID/trash")
+[ "$TRASH_CODE" = "200" ] || { echo "trash expected 200 got $TRASH_CODE"; cat /tmp/kadr-trash.json; exit 1; }
+N2=$(curl -fsS -b "$COOKIE" "$API/api/feeds/$FEED/timeline" | jq '.items | length')
+[ "$N2" = "0" ] || { echo "timeline after trash expected 0 got $N2"; exit 1; }
+curl -fsS -b "$COOKIE" "$API/api/me/trash" | jq -e '.items | length == 1' >/dev/null
+RESTORE_CODE=$(curl -sS -b "$COOKIE" -o /tmp/kadr-restore.json -w '%{http_code}' \
+  -X POST "$API/api/media/$MEDIA_ID/restore")
+[ "$RESTORE_CODE" = "200" ] || { echo "restore expected 200 got $RESTORE_CODE"; cat /tmp/kadr-restore.json; exit 1; }
+echo "trash restore smoke ok"
