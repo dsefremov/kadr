@@ -101,8 +101,10 @@ services:
       KADR_SMTP_PORT: ${KADR_SMTP_PORT:-1025}
       KADR_PUBLIC_URL: ${KADR_PUBLIC_URL:-http://127.0.0.1:8088}
       KADR_MAIL_FROM: ${KADR_MAIL_FROM:-noreply@kadr.local}
+      KADR_SPOOL_DIR: /spool
     volumes:
       - media_data:/data
+      - media_spool:/spool
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -126,6 +128,9 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile.media-runner
+    command: ['watch']
+    environment:
+      KADR_SPOOL_DIR: /spool
     network_mode: 'none'
     volumes:
       - ./fixtures:/fixtures:ro

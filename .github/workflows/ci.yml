@@ -108,5 +108,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          name: stage-4-screenshots
+          path: docs/stage-4/screenshots/*.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
           name: memory-measurement
           path: /tmp/kadr-memory.txt

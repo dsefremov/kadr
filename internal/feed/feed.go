@@ -83,14 +83,6 @@ type TimelinePage struct {
 	Cursor *string `json:"cursor"`
 }
 
-func Timeline(ctx context.Context, db *sql.DB, _ string, _ string, limit int) (*TimelinePage, error) {
-	if limit <= 0 {
-		limit = 30
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	_ = limit
-	// Media rows land in stage 4; timeline is empty until then.
-	return &TimelinePage{Items: []any{}}, nil
+func Timeline(ctx context.Context, db *sql.DB, feedPublicID string, cursor string, limit int) (*TimelinePage, error) {
+	return TimelineForFeed(ctx, db, feedPublicID, cursor, limit)
 }

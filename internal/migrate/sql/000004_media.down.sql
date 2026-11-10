@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS source_files;
+DROP TABLE IF EXISTS media_variants;
+DROP TABLE IF EXISTS media;

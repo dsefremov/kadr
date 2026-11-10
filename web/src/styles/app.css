@@ -105,6 +105,38 @@ a {
   justify-content: flex-end;
   margin-top: 20px;
 }
+.timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.timeline-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.timeline-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--bg);
+}
+
+.timeline-thumb.placeholder {
+  min-height: 120px;
+}
+
+.processing-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+
 .upload-progress-wrap {
   margin-top: 12px;
   height: 8px;

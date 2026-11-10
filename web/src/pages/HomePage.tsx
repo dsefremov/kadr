@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Shell } from '../components/Shell'
+import { Timeline } from '../components/Timeline'
 import { createTusUpload, tusResumeFromUrl, type TusUploadControl } from '../lib/tusUpload'
 
 type Me = {
@@ -28,7 +29,12 @@ export function HomePage() {
   const [guest, setGuest] = useState(false)
   const [uploadMsg, setUploadMsg] = useState('')
   const [uploadPct, setUploadPct] = useState<number | null>(null)
-  const [timelineEmpty, setTimelineEmpty] = useState(true)
+  const [timelineItems, setTimelineItems] = useState<
+    { id: string; kind: string; width?: number; height?: number; urls?: Record<string, string> }[]
+  >([])
+  const [mediaProcessing, setMediaProcessing] = useState<
+    { id: string; kind: string; state: string; error?: string }[]
+  >([])
   const [publicConfirm, setPublicConfirm] = useState(false)
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,6 +52,30 @@ export function HomePage() {
       .catch(() => undefined)
   }, [me?.email_verified])
 
+  const refreshTimeline = useCallback(() => {
+    if (!me?.feed_id) return
+    fetch(`/api/feeds/${me.feed_id}/timeline`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((t) => setTimelineItems((t.items ?? []) as typeof timelineItems))
+      .catch(() => undefined)
+    fetch('/api/me/media?status=processing', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { media: [] }))
+      .then((data) => {
+        const proc = (data.media ?? []) as typeof mediaProcessing
+        setMediaProcessing(proc)
+      })
+      .catch(() => undefined)
+    fetch('/api/me/media?status=failed', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { media: [] }))
+      .then((data) => {
+        const failed = (data.media ?? []) as typeof mediaProcessing
+        if (failed.length) {
+          setMediaProcessing((prev) => [...prev.filter((p) => p.state !== 'failed'), ...failed])
+        }
+      })
+      .catch(() => undefined)
+  }, [me?.feed_id])
+
   useEffect(() => {
     fetch('/api/me', { credentials: 'include' })
       .then((r) => {
@@ -59,10 +89,7 @@ export function HomePage() {
         if (data) {
           setMe(data)
           if (data.feed_id) {
-            fetch(`/api/feeds/${data.feed_id}/timeline`, { credentials: 'include' })
-              .then((r) => r.json())
-              .then((t) => setTimelineEmpty((t.items ?? []).length === 0))
-              .catch(() => undefined)
+            setMe(data)
           }
         }
       })
@@ -72,6 +99,13 @@ export function HomePage() {
   useEffect(() => {
     loadPending()
   }, [loadPending])
+
+  useEffect(() => {
+    refreshTimeline()
+    if (!me?.email_verified) return
+    const id = window.setInterval(refreshTimeline, 3000)
+    return () => window.clearInterval(id)
+  }, [me?.email_verified, refreshTimeline])
 
   async function applyVisibility(next: 'public' | 'private') {
     if (!me) return
@@ -120,9 +154,10 @@ export function HomePage() {
             return control.promise
           })()
       setUploadPct(100)
-      setUploadMsg(`Загрузка ${id} принята (обработка — этап 4).`)
+      setUploadMsg(`Загрузка ${id} принята — обработка на сервере…`)
       activeRef.current = null
       loadPending()
+      refreshTimeline()
     } catch {
       setUploadMsg('Не удалось загрузить файл')
       setUploadPct(null)
@@ -175,7 +210,7 @@ export function HomePage() {
         <>
           <div className="drop" data-testid="upload-zone">
             <b>Загрузить фото или видео</b>
-            <p className="note">Оригинал не хранится — только сжатая копия после обработки (этап 4).</p>
+            <p className="note">Оригинал не хранится — только сжатая копия после обработки.</p>
             <p className="note">tus с докачкой; до 50 МБ фото / 2 ГБ видео; резерв квоты сразу.</p>
             <input
               ref={inputRef}
@@ -227,19 +262,21 @@ export function HomePage() {
             </div>
           ) : null}
           {me.handle ? (
-            <p className="note">
-              Лента{' '}
-              <button type="button" className="btn sm" data-testid="visibility-toggle" onClick={onVisibilityClick}>
-                {me.feed_visibility === 'public' ? 'публичная' : 'личная'}
-              </button>
-              {timelineEmpty ? ' — пока пусто, ждём обработку медиа.' : ''}
-            </p>
+            <>
+              <p className="note">
+                Лента{' '}
+                <button type="button" className="btn sm" data-testid="visibility-toggle" onClick={onVisibilityClick}>
+                  {me.feed_visibility === 'public' ? 'публичная' : 'личная'}
+                </button>
+              </p>
+              <Timeline items={timelineItems} processing={mediaProcessing} />
+            </>
           ) : null}
         </>
       ) : (
         <div className="drop">
           <b>Лента и загрузки</b>
-          <p className="note">Этап 2: tus и лента; медиа появится после этапа 4.</p>
+          <p className="note">Войдите, чтобы загружать фото и видео в ленту.</p>
         </div>
       )}
       <ConfirmModal

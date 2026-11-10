@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/dsefremov/kadr/internal/auth"
+	"github.com/dsefremov/kadr/internal/media"
 	"github.com/dsefremov/kadr/internal/jobs"
 	"github.com/dsefremov/kadr/internal/mail"
 	"github.com/dsefremov/kadr/internal/upload"
@@ -37,8 +38,10 @@ func (p *Processor) Process(ctx context.Context, j *jobs.Job) error {
 	case jobs.KindCleanupUnverified:
 		return p.cleanupUnverified(ctx)
 	case jobs.KindDerive:
-		p.log.Info("derive job queued (media pipeline stage 4)", "id", j.ID)
-		return nil
+		if !spoolWritable() {
+			return fmt.Errorf("spool not writable at %s", media.SpoolRoot())
+		}
+		return p.derive(ctx, j.Payload)
 	default:
 		p.log.Warn("unknown job kind", "kind", j.Kind)
 		return nil
