@@ -105,17 +105,6 @@ func isDupKey(err error) bool {
 	return errors.Is(err, ErrDuplicate) || strings.Contains(msg, "Duplicate entry") || strings.Contains(msg, "1062")
 }
 
-func contains(s, sub string) bool {
-	return len(sub) > 0 && (s == sub || len(s) >= len(sub) && (func() bool {
-		for i := 0; i+len(sub) <= len(s); i++ {
-			if s[i:i+len(sub)] == sub {
-				return true
-			}
-		}
-		return false
-	}()))
-}
-
 func ReleaseReserved(ctx context.Context, db *sql.DB, ownerID int64, uploadLen uint64) error {
 	_, err := db.ExecContext(ctx, `
 		UPDATE users SET reserved_bytes = reserved_bytes - ? WHERE id = ? AND reserved_bytes >= ?`,
