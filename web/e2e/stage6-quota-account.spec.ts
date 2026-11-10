@@ -76,6 +76,28 @@ for (const { slug, width, height } of [
     const a11y = await new AxeBuilder({ page }).analyze()
     expect(a11y.violations).toEqual([])
   })
+
+  test(`stage 6 quota-exceeded screenshots ${slug}`, async ({ page, request }) => {
+    const out = screenshotDir('stage-6')
+    await page.setViewportSize({ width, height })
+    await registerVerifyLogin(page, request)
+    await page.route('**/api/uploads', (route) => {
+      if (route.request().method() === 'POST') {
+        return route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'quota_exceeded', quota_free: 100_000_000, need_bytes: 820_000_000 }),
+        })
+      }
+      return route.continue()
+    })
+    const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
+    await page.getByTestId('upload-input').setInputFiles(fixture)
+    await expect(page.getByTestId('quota-exceeded')).toBeVisible({ timeout: 30_000 })
+    await page.screenshot({ path: `${out}/quota-exceeded-${slug}.png`, fullPage: true })
+    const a11y = await new AxeBuilder({ page }).analyze()
+    expect(a11y.violations).toEqual([])
+  })
 }
 
 test('account delete flow', async ({ page, request }) => {
