@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local dev only (COMPOSE_PROFILES=dev): when container→container TCP is blocked,
 # reach mysql/mailpit via the compose bridge gateway + published host ports.
-# Sourced by ci-integration.sh and playwright-local.sh — not used in CI workflows.
+# Sourced by playwright-local.sh / manual dev runs only — not by ci-integration.sh (develop has inline bridge).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

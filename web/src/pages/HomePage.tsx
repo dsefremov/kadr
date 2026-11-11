@@ -79,7 +79,7 @@ export function HomePage() {
 
   const applyTimelinePayload = useCallback((payload: { items?: unknown }) => {
     const next = Array.isArray(payload.items) ? (payload.items as typeof timelineItems) : []
-    setTimelineItems((prev) => (next.length === 0 && prev.length > 0 ? prev : next))
+    setTimelineItems(next)
   }, [])
 
   const refreshTimeline = useCallback(() => {
@@ -427,22 +427,24 @@ export function HomePage() {
               </ul>
             </div>
           ) : null}
-          <>
-            <p className="note">
-              Лента{' '}
-              <button type="button" className="btn sm" data-testid="visibility-toggle" onClick={onVisibilityClick}>
-                {me.feed_visibility === 'public' ? 'публичная' : 'личная'}
-              </button>
-            </p>
-            <Timeline
-              items={timelineItems}
-              processing={mediaProcessing}
-              buckets={buckets}
-              activeMonth={activeMonth}
-              onScrubJump={onScrubJump}
-              onTrash={(id) => void trashMedia(id)}
-            />
-          </>
+          {me.handle ? (
+            <>
+              <p className="note">
+                Лента{' '}
+                <button type="button" className="btn sm" data-testid="visibility-toggle" onClick={onVisibilityClick}>
+                  {me.feed_visibility === 'public' ? 'публичная' : 'личная'}
+                </button>
+              </p>
+              <Timeline
+                items={timelineItems}
+                processing={mediaProcessing}
+                buckets={buckets}
+                activeMonth={activeMonth}
+                onScrubJump={onScrubJump}
+                onTrash={(id) => void trashMedia(id)}
+              />
+            </>
+          ) : null}
         </>
       ) : (
         <div className="drop">

@@ -9,6 +9,7 @@ mkdir -p "${ROOT}/tmp"
 source "${ROOT}/scripts/docker-wrap.sh"
 
 export COMPOSE_PROFILES=dev
+export COMPOSE_FILE="${ROOT}/docker-compose.yml:${ROOT}/docker-compose.dev.yml"
 export KADR_KEEP_UP=1
 export KADR_HTTP_PORT="${KADR_HTTP_PORT:-8088}"
 
@@ -20,6 +21,8 @@ if PIDS="$(lsof -i :"${KADR_HTTP_PORT}" -t 2>/dev/null || true)"; then
   fi
 fi
 
+# Bridge gateway env (VMs with broken container→container TCP); then stock ci-integration from develop.
+source "${ROOT}/scripts/compose-dev-bridge-env.sh"
 "${ROOT}/scripts/ci-integration.sh"
 
 "${ROOT}/scripts/drain-dev-job-queue.sh"

@@ -1,0 +1,10 @@
+# Local-only overlay (not used by GitHub Actions).
+# Use: COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml scripts/playwright-local.sh
+# or: source scripts/compose-dev-bridge-env.sh && docker compose ...
+services:
+  proxy:
+    environment:
+      KADR_API_UPSTREAM: ${KADR_API_UPSTREAM:-http://api:8080}
+  worker:
+    environment:
+      KADR_WORKER_POLL_INTERVAL: ${KADR_WORKER_POLL_INTERVAL:-5s}

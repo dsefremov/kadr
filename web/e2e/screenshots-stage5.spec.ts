@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { join } from 'node:path'
-import { registerVerifyLogin, screenshotDir } from './helpers'
+import { registerVerifyLogin, screenshotDir, waitForTimelineReady } from './helpers'
 
 for (const { slug, width, height } of [
   { slug: 'desktop-1440', width: 1440, height: 900 },
@@ -14,7 +14,8 @@ for (const { slug, width, height } of [
     await registerVerifyLogin(page, request)
     const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
     await page.getByTestId('upload-input').setInputFiles(fixture)
-    await expect(page.getByTestId('timeline-item')).toBeVisible({ timeout: 120_000 })
+    await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
+    await waitForTimelineReady(page, 1)
     await page.screenshot({ path: `${out}/timeline-srcset-${slug}.png`, fullPage: true })
     await page.getByTestId('upload-input').setInputFiles(fixture)
     await expect(page.getByTestId('upload-duplicate')).toBeVisible({ timeout: 120_000 })

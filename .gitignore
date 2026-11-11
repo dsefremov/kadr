@@ -3,3 +3,11 @@ actionlint
 .tmp-bench-out/
 .tmp-spool-in/
 .tmp-spool-out/
+cookies.txt
+login.json
+.tmp-probe-dates.sh
+go-test.log
+
+tmp/
+test-results/
+mockups-reference/

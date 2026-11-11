@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { join } from 'node:path'
-import { registerVerifyLogin, screenshotDir } from './helpers'
+import { registerVerifyLogin, screenshotDir, waitForTimelineReady } from './helpers'
 
 for (const { slug, width, height } of [
   { slug: 'desktop-1440', width: 1440, height: 900 },
@@ -17,7 +17,7 @@ for (const { slug, width, height } of [
     await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
     await page.getByTestId('upload-progress').waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined)
     await page.screenshot({ path: `${out}/processing-${slug}.png`, fullPage: true })
-    await expect(page.getByTestId('timeline-item')).toBeVisible({ timeout: 120_000 })
+    await waitForTimelineReady(page, 1)
     await page.screenshot({ path: `${out}/timeline-ready-${slug}.png`, fullPage: true })
     const a11y = await new AxeBuilder({ page }).analyze()
     expect(a11y.violations).toEqual([])
