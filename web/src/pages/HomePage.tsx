@@ -316,70 +316,72 @@ export function HomePage() {
             />
           ) : null}
           {quotaExceeded ? <QuotaExceededBanner need={quotaExceeded.need} free={quotaExceeded.free} /> : null}
-          <div className="drop" data-testid="upload-zone">
-            <b>Загрузить фото или видео</b>
-            <p className="note">Оригинал не хранится — только сжатая копия после обработки.</p>
-            <p className="note">tus с докачкой; до 50 МБ фото / 200 МБ видео; резерв квоты сразу.</p>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*,video/*"
-              style={{ display: 'none' }}
-              data-testid="upload-input"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) {
-                  void onFilePicked(f, resumeRef.current ?? undefined)
-                  resumeRef.current = null
-                }
-                e.target.value = ''
-              }}
-            />
-            <button type="button" className="btn pri" data-testid="upload-picker" onClick={() => inputRef.current?.click()}>
-              Выбрать файл
-            </button>
-            {uploadPct !== null ? (
-              <div className="upload-progress-wrap" data-testid="upload-progress" aria-live="polite">
-                <div className="upload-progress-bar" style={{ width: `${uploadPct}%` }} />
-                <span className="note">{uploadPct}%</span>
-              </div>
-            ) : null}
-            {uploadMsg ? (
-              <p
-                className="note"
-                data-testid={
-                  uploadDupTrash
-                    ? 'upload-duplicate-trash'
-                    : uploadDupUrl
-                      ? 'upload-duplicate'
-                      : 'upload-message'
-                }
-              >
-                {uploadMsg}
-                {uploadDupUrl ? (
-                  <>
-                    {' '}
-                    <a href={uploadDupUrl} data-testid="upload-duplicate-link">
-                      Открыть превью
-                    </a>
-                  </>
-                ) : null}
-                {uploadDupTrash ? (
-                  <>
-                    {' '}
-                    <button
-                      type="button"
-                      className="btn sm pri"
-                      data-testid="upload-restore-trash"
-                      onClick={() => void restoreDupFromTrash()}
-                    >
-                      Восстановить
-                    </button>
-                  </>
-                ) : null}
-              </p>
-            ) : null}
-          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*,video/*"
+            style={{ display: 'none' }}
+            data-testid="upload-input"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) {
+                void onFilePicked(f, resumeRef.current ?? undefined)
+                resumeRef.current = null
+              }
+              e.target.value = ''
+            }}
+          />
+          {timelineItems.length === 0 ? (
+            <div className="drop" data-testid="upload-zone">
+              <b>Загрузить фото или видео</b>
+              <p className="note">Оригинал не хранится — только сжатая копия после обработки.</p>
+              <p className="note">tus с докачкой; до 50 МБ фото / 200 МБ видео; резерв квоты сразу.</p>
+              <button type="button" className="btn pri" data-testid="upload-picker" onClick={() => inputRef.current?.click()}>
+                Выбрать файл
+              </button>
+            </div>
+          ) : null}
+          {uploadPct !== null ? (
+            <div className="upload-progress-wrap" data-testid="upload-progress" aria-live="polite">
+              <div className="upload-progress-bar" style={{ width: `${uploadPct}%` }} />
+              <span className="note">{uploadPct}%</span>
+            </div>
+          ) : null}
+          {uploadMsg ? (
+            <p
+              className="note"
+              data-testid={
+                uploadDupTrash
+                  ? 'upload-duplicate-trash'
+                  : uploadDupUrl
+                    ? 'upload-duplicate'
+                    : 'upload-message'
+              }
+            >
+              {uploadMsg}
+              {uploadDupUrl ? (
+                <>
+                  {' '}
+                  <a href={uploadDupUrl} data-testid="upload-duplicate-link">
+                    Открыть превью
+                  </a>
+                </>
+              ) : null}
+              {uploadDupTrash ? (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="btn sm pri"
+                    data-testid="upload-restore-trash"
+                    onClick={() => void restoreDupFromTrash()}
+                  >
+                    Восстановить
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ) : null}
           {pendingUploads.length > 0 ? (
             <div className="note" data-testid="pending-uploads">
               <b>Незавершённые загрузки</b>
