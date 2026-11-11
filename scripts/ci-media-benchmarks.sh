@@ -9,10 +9,17 @@ RESULTS="$OUT_ROOT/results.tsv"
 mkdir -p "$OUT_ROOT"
 printf "asset\tkind\twall_seconds\tpeak_rss_kb\tpeak_mib\n" >"$RESULTS"
 
-RUNNER_IMAGE="$(docker compose images -q media-runner 2>/dev/null | head -1)"
+RUNNER_IMAGE="$(docker compose images -q media-runner 2>/dev/null | head -1 || true)"
 if [ -z "$RUNNER_IMAGE" ]; then
   docker compose build media-runner
-  RUNNER_IMAGE="$(docker compose images -q media-runner | head -1)"
+  RUNNER_IMAGE="$(docker compose images -q media-runner 2>/dev/null | head -1 || true)"
+fi
+if [ -z "$RUNNER_IMAGE" ]; then
+  RUNNER_IMAGE="$(docker image inspect -f '{{.Id}}' kadr-media-runner:latest 2>/dev/null || true)"
+fi
+if [ -z "$RUNNER_IMAGE" ]; then
+  echo "media-runner image not found" >&2
+  exit 1
 fi
 
 run_derive() {

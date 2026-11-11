@@ -10,6 +10,8 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { TrashPage } from './pages/TrashPage'
 import { AccountPage } from './pages/AccountPage'
+import { UploadsPage } from './pages/UploadsPage'
+import { ViewerPage } from './pages/ViewerPage'
 
 export default function App() {
   return (
@@ -23,7 +25,9 @@ export default function App() {
         <Route path="/forgot" element={<ForgotPasswordPage />} />
         <Route path="/reset" element={<ResetPasswordPage />} />
         <Route path="/trash" element={<TrashPage />} />
+        <Route path="/uploads" element={<UploadsPage />} />
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/view/:mediaId" element={<ViewerPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

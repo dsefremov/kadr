@@ -5,7 +5,7 @@ const (
 	MB = 1_000_000
 	GB = 1_000_000_000
 
-	DefaultQuotaBytes = 5 * GB
+	DefaultQuotaBytes = 1 * GB
 	PhotoMaxBytes     = 50 * MB
 	VideoMaxBytes     = 2 * GB
 

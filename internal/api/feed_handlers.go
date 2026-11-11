@@ -12,7 +12,35 @@ import (
 func (s *Server) registerFeedRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/u/{handle}/feed", s.getPublicFeed)
 	mux.HandleFunc("GET /api/feeds/{feedId}/timeline", s.getTimeline)
+	mux.HandleFunc("GET /api/feeds/{feedId}/timeline/buckets", s.getTimelineBuckets)
 	mux.HandleFunc("PATCH /api/me/feed", s.patchMyFeed)
+}
+
+func (s *Server) getTimelineBuckets(w http.ResponseWriter, r *http.Request) {
+	feedID := r.PathValue("feedId")
+	meta, err := feed.ByPublicID(r.Context(), s.db, feedID)
+	if errors.Is(err, feed.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "server error"})
+		return
+	}
+	sess := s.currentSession(r)
+	if meta.Visibility != "public" && (sess == nil || sess.UserID != meta.OwnerID) {
+		http.NotFound(w, r)
+		return
+	}
+	buckets, err := feed.TimelineBuckets(r.Context(), s.db, feedID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "server error"})
+		return
+	}
+	if meta.Visibility == "public" {
+		w.Header().Set("X-Robots-Tag", "noindex")
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"buckets": buckets})
 }
 
 func (s *Server) getPublicFeed(w http.ResponseWriter, r *http.Request) {
