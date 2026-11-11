@@ -319,7 +319,7 @@ export function HomePage() {
           <div className="drop" data-testid="upload-zone">
             <b>Загрузить фото или видео</b>
             <p className="note">Оригинал не хранится — только сжатая копия после обработки.</p>
-            <p className="note">tus с докачкой; до 50 МБ фото / 2 ГБ видео; резерв квоты сразу.</p>
+            <p className="note">tus с докачкой; до 50 МБ фото / 200 МБ видео; резерв квоты сразу.</p>
             <input
               ref={inputRef}
               type="file"

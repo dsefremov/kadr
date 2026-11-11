@@ -10,6 +10,7 @@ import (
 	"github.com/dsefremov/kadr/internal/media"
 	"github.com/dsefremov/kadr/internal/quota"
 	"github.com/dsefremov/kadr/internal/session"
+	"github.com/dsefremov/kadr/internal/units"
 	"github.com/dsefremov/kadr/internal/upload"
 )
 
@@ -66,9 +67,9 @@ func (s *Server) postUpload(w http.ResponseWriter, r *http.Request) {
 
 func maxSize(kind string) int64 {
 	if kind == "video" {
-		return 2_000_000_000
+		return int64(units.VideoMaxBytes)
 	}
-	return 50_000_000
+	return int64(units.PhotoMaxBytes)
 }
 
 func (s *Server) uploadLocation(publicID string) string {
