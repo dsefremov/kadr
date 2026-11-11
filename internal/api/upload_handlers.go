@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/dsefremov/kadr/internal/media"
+	"github.com/dsefremov/kadr/internal/quota"
 	"github.com/dsefremov/kadr/internal/session"
 	"github.com/dsefremov/kadr/internal/upload"
 )
@@ -41,7 +42,14 @@ func (s *Server) postUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if errors.Is(err, upload.ErrQuota) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "quota exceeded"})
+		var used, trash, reserved, limit uint64
+		_ = s.db.QueryRowContext(r.Context(), `
+			SELECT used_bytes, trash_bytes, reserved_bytes, quota_bytes FROM users WHERE id = ?`, sess.UserID).
+			Scan(&used, &trash, &reserved, &limit)
+		free := quota.FreeBytes(used, trash, reserved, limit)
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"error": "quota_exceeded", "quota_free": free, "need_bytes": length,
+		})
 		return
 	}
 	if err != nil {

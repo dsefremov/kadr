@@ -237,6 +237,9 @@ func (s *Service) Login(ctx context.Context, email, pw string) (int64, error) {
 	if status == "blocked" {
 		return 0, ErrBlocked
 	}
+	if status == "deleting" {
+		return 0, ErrBlocked
+	}
 	ok, err := password.Compare(hash, pw)
 	if err != nil || !ok {
 		return 0, ErrInvalidCredentials

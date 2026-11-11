@@ -14,6 +14,29 @@ func (s *Server) registerTrashRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/media/{id}/restore", s.postMediaRestore)
 	mux.HandleFunc("GET /api/me/trash", s.getMyTrash)
 	mux.HandleFunc("DELETE /api/me/trash", s.deleteMyTrash)
+	mux.HandleFunc("DELETE /api/media/{id}/trash", s.deleteMediaTrashForever)
+}
+
+func (s *Server) deleteMediaTrashForever(w http.ResponseWriter, r *http.Request) {
+	sess := s.requireVerified(w, r)
+	if sess == nil {
+		return
+	}
+	id := r.PathValue("id")
+	err := media.DeleteTrashedByPublicID(r.Context(), s.db, s.opts.MediaDir, sess.UserID, id)
+	if errors.Is(err, media.ErrNotFound) || errors.Is(err, media.ErrTrashOwner) {
+		http.NotFound(w, r)
+		return
+	}
+	if errors.Is(err, media.ErrNotTrashed) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "not_in_trash"})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "server error"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "purged"})
 }
 
 func (s *Server) postMediaTrash(w http.ResponseWriter, r *http.Request) {

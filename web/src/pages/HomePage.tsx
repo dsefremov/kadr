@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { QuotaBar, QuotaExceededBanner, QuotaWarningBanner } from '../components/QuotaBar'
 import { Shell } from '../components/Shell'
 import { Timeline } from '../components/Timeline'
 import {
   createTusUpload,
   DuplicateUploadError,
+  QuotaExceededError,
   tusResumeFromUrl,
   type TusUploadControl,
 } from '../lib/tusUpload'
@@ -19,6 +21,9 @@ type Me = {
   quota_limit?: number
   quota_reserved?: number
   quota_used?: number
+  quota_trash?: number
+  quota_free?: number
+  quota_status?: string
 }
 
 type PendingUpload = {
@@ -36,6 +41,7 @@ export function HomePage() {
   const [uploadMsg, setUploadMsg] = useState('')
   const [uploadDupUrl, setUploadDupUrl] = useState<string | null>(null)
   const [uploadDupTrash, setUploadDupTrash] = useState<string | null>(null)
+  const [quotaExceeded, setQuotaExceeded] = useState<{ need?: number; free: number } | null>(null)
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [timelineItems, setTimelineItems] = useState<
     { id: string; kind: string; width?: number; height?: number; urls?: Record<string, string> }[]
@@ -141,6 +147,7 @@ export function HomePage() {
     setUploadMsg('')
     setUploadDupUrl(null)
     setUploadDupTrash(null)
+    setQuotaExceeded(null)
     setUploadPct(0)
     const kind = (file.type.startsWith('video/') ? 'video' : 'photo') as 'photo' | 'video'
     const kindFromServer = resume?.kind === 'video' ? 'video' : 'photo'
@@ -169,12 +176,18 @@ export function HomePage() {
       loadPending()
       refreshTimeline()
     } catch (e) {
+      if (e instanceof QuotaExceededError) {
+        setUploadPct(null)
+        setQuotaExceeded({ need: e.body.need_bytes, free: e.body.quota_free })
+        setUploadMsg('Не хватает места для загрузки.')
+        return
+      }
       if (e instanceof DuplicateUploadError) {
         setUploadPct(null)
         setUploadDupUrl(e.body.preview_url)
         if (e.body.error === 'duplicate_in_trash') {
           setUploadDupTrash(e.body.media_id)
-          setUploadMsg('Этот файл в корзине — восстановить?')
+          setUploadMsg('Этот файл в корзине. Второй экземпляр не создаём — восстановите в ленту.')
         } else {
           setUploadMsg('Этот файл уже есть в вашей ленте.')
         }
@@ -250,6 +263,24 @@ export function HomePage() {
       </div>
       {me?.email_verified ? (
         <>
+          {me.quota_limit ? (
+            <QuotaBar
+              used={me.quota_used ?? 0}
+              trash={me.quota_trash ?? 0}
+              reserved={me.quota_reserved ?? 0}
+              limit={me.quota_limit}
+              status={me.quota_status}
+            />
+          ) : null}
+          {me.quota_status === 'warning' ? (
+            <QuotaWarningBanner
+              free={me.quota_free ?? 0}
+              limit={me.quota_limit ?? 0}
+              trash={me.quota_trash ?? 0}
+              onOpenTrash={() => navigate('/trash')}
+            />
+          ) : null}
+          {quotaExceeded ? <QuotaExceededBanner need={quotaExceeded.need} free={quotaExceeded.free} /> : null}
           <div className="drop" data-testid="upload-zone">
             <b>Загрузить фото или видео</b>
             <p className="note">Оригинал не хранится — только сжатая копия после обработки.</p>
@@ -279,7 +310,16 @@ export function HomePage() {
               </div>
             ) : null}
             {uploadMsg ? (
-              <p className="note" data-testid={uploadDupUrl ? 'upload-duplicate' : 'upload-message'}>
+              <p
+                className="note"
+                data-testid={
+                  uploadDupTrash
+                    ? 'upload-duplicate-trash'
+                    : uploadDupUrl
+                      ? 'upload-duplicate'
+                      : 'upload-message'
+                }
+              >
                 {uploadMsg}
                 {uploadDupUrl ? (
                   <>
@@ -338,6 +378,10 @@ export function HomePage() {
                 {' · '}
                 <button type="button" className="btn sm" data-testid="open-trash" onClick={() => navigate('/trash')}>
                   Корзина
+                </button>
+                {' · '}
+                <button type="button" className="btn sm" data-testid="open-account" onClick={() => navigate('/account')}>
+                  Аккаунт
                 </button>
               </p>
               <Timeline items={timelineItems} processing={mediaProcessing} onTrash={(id) => void trashMedia(id)} />

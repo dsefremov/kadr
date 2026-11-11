@@ -35,7 +35,7 @@ test('duplicate upload when file is in trash offers restore', async ({ page, req
   await expect(page.getByTestId('timeline-empty')).toBeVisible({ timeout: 30_000 })
 
   await page.getByTestId('upload-input').setInputFiles(fixture)
-  await expect(page.getByTestId('upload-duplicate')).toContainText('корзине', { timeout: 120_000 })
+  await expect(page.getByTestId('upload-duplicate-trash')).toContainText('корзине', { timeout: 120_000 })
   await expect(page.getByTestId('upload-restore-trash')).toBeVisible()
   await page.getByTestId('upload-restore-trash').click()
   await expect(page.getByTestId('timeline-item')).toBeVisible({ timeout: 30_000 })
