@@ -87,20 +87,10 @@ export function HomePage() {
       .then((r) => (r.ok ? r.json() : { buckets: [] }))
       .then((b) => setBuckets((b.buckets ?? []) as Bucket[]))
       .catch(() => undefined)
-    // One combined update avoids processing banner flicker (empty → failed → empty).
-    Promise.all([
-      fetch('/api/me/media?status=processing', { credentials: 'include' }).then((r) =>
-        r.ok ? r.json() : { media: [] },
-      ),
-      fetch('/api/me/media?status=failed', { credentials: 'include' }).then((r) =>
-        r.ok ? r.json() : { media: [] },
-      ),
-    ])
-      .then(([procData, failData]) => {
-        const proc = (procData.media ?? []) as typeof mediaProcessing
-        const failed = (failData.media ?? []) as typeof mediaProcessing
-        setMediaProcessing([...proc, ...failed])
-      })
+    // Only in-flight processing — sticky "failed" rows used to keep an error plaque forever.
+    fetch('/api/me/media?status=processing', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { media: [] }))
+      .then((data) => setMediaProcessing((data.media ?? []) as typeof mediaProcessing))
       .catch(() => undefined)
   }, [me?.feed_id])
 
@@ -293,33 +283,15 @@ export function HomePage() {
       </div>
       {me?.email_verified ? (
         <>
-          {mediaProcessing.some((p) => p.state !== 'failed') ? (
+          {mediaProcessing.length > 0 ? (
             <div className="banner" data-testid="processing-banner">
               <div>
-                <div className="t1">
-                  {mediaProcessing.filter((p) => p.state !== 'failed').length} файл(ов) обрабатывается
-                </div>
+                <div className="t1">{mediaProcessing.length} файл(ов) обрабатывается</div>
                 <p className="note" style={{ margin: 0 }}>
                   Появятся в ленте через пару минут.
                 </p>
               </div>
               <button type="button" className="btn sm" data-testid="open-uploads" onClick={() => navigate('/uploads')}>
-                Открыть загрузки
-              </button>
-            </div>
-          ) : null}
-          {mediaProcessing.some((p) => p.state === 'failed') ? (
-            <div className="banner warn" data-testid="failed-banner" role="status">
-              <div>
-                <div className="t1">Не удалось обработать файл</div>
-                <p className="note" style={{ margin: 0 }}>
-                  {mediaProcessing
-                    .filter((p) => p.state === 'failed')
-                    .map((p) => p.error ?? 'ошибка обработки')
-                    .join('; ')}
-                </p>
-              </div>
-              <button type="button" className="btn sm" data-testid="open-uploads-failed" onClick={() => navigate('/uploads')}>
                 Открыть загрузки
               </button>
             </div>
