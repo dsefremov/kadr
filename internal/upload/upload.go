@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,17 +50,25 @@ type Service struct {
 }
 
 type Row struct {
-	ID           int64
-	PublicID     string
-	OwnerID      int64
-	Kind         string
-	UploadLength uint64
-	Offset       uint64
-	IncomingKey  string
-	State        string
+	ID             int64
+	PublicID       string
+	OwnerID        int64
+	Kind           string
+	ClientFilename string
+	ClientMTime    time.Time // zero if unknown
+	UploadLength   uint64
+	Offset         uint64
+	IncomingKey    string
+	State          string
 }
 
-func (s *Service) Create(ctx context.Context, ownerID int64, length uint64, kind string) (*Row, error) {
+// CreateOpts carries optional client metadata from tus Upload-Metadata.
+type CreateOpts struct {
+	Filename string
+	MTime    time.Time
+}
+
+func (s *Service) Create(ctx context.Context, ownerID int64, length uint64, kind string, opts CreateOpts) (*Row, error) {
 	if kind != "photo" && kind != "video" {
 		return nil, fmt.Errorf("unknown kind")
 	}
@@ -103,10 +112,19 @@ func (s *Service) Create(ctx context.Context, ownerID int64, length uint64, kind
 		return nil, ErrQuota
 	}
 	exp := time.Now().Add(UploadExpiry)
+	var filename any
+	if opts.Filename != "" {
+		filename = truncateRunes(opts.Filename, 255)
+	}
+	var mtime any
+	if !opts.MTime.IsZero() {
+		mtime = opts.MTime.UTC()
+	}
 	res2, err := tx.ExecContext(ctx, `
-		INSERT INTO uploads (public_id, owner_id, kind_declared, upload_length, offset_bytes, incoming_key, state, last_activity_at, expires_at)
-		VALUES (?, ?, ?, ?, 0, ?, 'uploading', NOW(), ?)`,
-		pubID, ownerID, kind, length, key, exp)
+		INSERT INTO uploads (public_id, owner_id, kind_declared, client_filename, client_mtime,
+			upload_length, offset_bytes, incoming_key, state, last_activity_at, expires_at)
+		VALUES (?, ?, ?, ?, ?, ?, 0, ?, 'uploading', NOW(), ?)`,
+		pubID, ownerID, kind, filename, mtime, length, key, exp)
 	if err != nil {
 		return nil, err
 	}
@@ -118,18 +136,43 @@ func (s *Service) Create(ctx context.Context, ownerID int64, length uint64, kind
 	}
 	return &Row{
 		ID: id, PublicID: pubID, OwnerID: ownerID, Kind: kind,
+		ClientFilename: opts.Filename, ClientMTime: opts.MTime,
 		UploadLength: length, Offset: 0, IncomingKey: key, State: "uploading",
 	}, nil
 }
 
+func truncateRunes(s string, max int) string {
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max])
+}
+
 func ParseKindFromMetadata(header string) string {
+	meta := ParseMetadata(header)
+	return meta.Kind
+}
+
+// Metadata is decoded tus Upload-Metadata.
+type Metadata struct {
+	Kind     string
+	Filename string
+	MTime    time.Time
+}
+
+func ParseMetadata(header string) Metadata {
+	out := Metadata{Kind: "photo"}
 	if header == "" {
-		return "photo"
+		return out
 	}
 	for _, part := range strings.Split(header, ",") {
 		part = strings.TrimSpace(part)
 		kv := strings.SplitN(part, " ", 2)
-		if len(kv) != 2 || kv[0] != "filetype" {
+		if len(kv) != 2 {
 			continue
 		}
 		raw, err := base64.RawStdEncoding.DecodeString(kv[1])
@@ -139,25 +182,45 @@ func ParseKindFromMetadata(header string) string {
 		if err != nil {
 			raw = []byte(kv[1])
 		}
-		k := strings.ToLower(strings.TrimSpace(string(raw)))
-		if k == "video" || k == "photo" {
-			return k
+		val := strings.TrimSpace(string(raw))
+		switch kv[0] {
+		case "filetype":
+			k := strings.ToLower(val)
+			if k == "video" || k == "photo" {
+				out.Kind = k
+			}
+		case "filename":
+			out.Filename = val
+		case "mtime":
+			if ms, err := strconv.ParseInt(val, 10, 64); err == nil && ms > 0 {
+				out.MTime = time.UnixMilli(ms).UTC()
+			}
 		}
 	}
-	return "photo"
+	return out
 }
 
 func (s *Service) Get(ctx context.Context, publicID string, ownerID int64) (*Row, error) {
 	var row Row
+	var filename sql.NullString
+	var mtime sql.NullTime
 	err := s.DB.QueryRowContext(ctx, `
-		SELECT id, public_id, owner_id, kind_declared, upload_length, offset_bytes, incoming_key, state
+		SELECT id, public_id, owner_id, kind_declared, client_filename, client_mtime,
+			upload_length, offset_bytes, incoming_key, state
 		FROM uploads WHERE public_id = ? AND owner_id = ?`, publicID, ownerID).
-		Scan(&row.ID, &row.PublicID, &row.OwnerID, &row.Kind, &row.UploadLength, &row.Offset, &row.IncomingKey, &row.State)
+		Scan(&row.ID, &row.PublicID, &row.OwnerID, &row.Kind, &filename, &mtime,
+			&row.UploadLength, &row.Offset, &row.IncomingKey, &row.State)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
+	}
+	if filename.Valid {
+		row.ClientFilename = filename.String
+	}
+	if mtime.Valid {
+		row.ClientMTime = mtime.Time
 	}
 	return &row, nil
 }

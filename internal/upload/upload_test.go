@@ -17,6 +17,17 @@ func TestParseKindFromMetadata(t *testing.T) {
 	}
 }
 
+func TestParseMetadataFilenameMtime(t *testing.T) {
+	// filename "a.jpg" = YS5qcGc, mtime 1700000000000 = MTcwMDAwMDAwMDAwMA
+	meta := ParseMetadata("filetype cGhvdG8, filename YS5qcGc, mtime MTcwMDAwMDAwMDAwMA")
+	if meta.Kind != "photo" || meta.Filename != "a.jpg" {
+		t.Fatalf("got %+v", meta)
+	}
+	if meta.MTime.UnixMilli() != 1700000000000 {
+		t.Fatalf("mtime %v", meta.MTime)
+	}
+}
+
 func TestCreatePatchComplete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration")

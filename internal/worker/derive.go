@@ -27,12 +27,22 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 		return nil
 	}
 	var row upload.Row
+	var filename sql.NullString
+	var mtime sql.NullTime
 	err := p.db.QueryRowContext(ctx, `
-		SELECT id, public_id, owner_id, kind_declared, upload_length, offset_bytes, incoming_key, state
+		SELECT id, public_id, owner_id, kind_declared, client_filename, client_mtime,
+			upload_length, offset_bytes, incoming_key, state
 		FROM uploads WHERE id = ?`, pl.UploadID).
-		Scan(&row.ID, &row.PublicID, &row.OwnerID, &row.Kind, &row.UploadLength, &row.Offset, &row.IncomingKey, &row.State)
+		Scan(&row.ID, &row.PublicID, &row.OwnerID, &row.Kind, &filename, &mtime,
+			&row.UploadLength, &row.Offset, &row.IncomingKey, &row.State)
 	if err != nil {
 		return err
+	}
+	if filename.Valid {
+		row.ClientFilename = filename.String
+	}
+	if mtime.Valid {
+		row.ClientMTime = mtime.Time
 	}
 	if row.State != "complete" {
 		return fmt.Errorf("upload %d not complete (state=%s)", row.ID, row.State)
@@ -54,7 +64,10 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 	if err != nil {
 		return err
 	}
-	mediaID, mediaPub, err := media.CreateProcessing(ctx, p.db, row.OwnerID, row.ID, kind, row.UploadLength, dedup, row.IncomingKey)
+	hint := media.TakenHint{Filename: row.ClientFilename, MTime: row.ClientMTime}
+	takenSort, takenDate, srcKind := media.ResolveTaken(src, kind, hint, time.Now().UTC(), "")
+	mediaID, mediaPub, err := media.CreateProcessing(ctx, p.db, row.OwnerID, row.ID, kind, row.UploadLength, dedup, row.IncomingKey,
+		takenSort, takenDate, srcKind)
 	if errors.Is(err, media.ErrDuplicate) {
 		_ = media.ReleaseReserved(ctx, p.db, row.OwnerID, row.UploadLength)
 		media.DeleteIncoming(p.uploads, &row)
@@ -66,7 +79,7 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 	}
 	spool := media.SpoolRoot()
 	jobID := fmt.Sprintf("u%d", row.ID)
-	p.log.Info("derive start", "upload_id", row.ID, "spool_job", jobID, "kind", kind)
+	p.log.Info("derive start", "upload_id", row.ID, "spool_job", jobID, "kind", kind, "taken_date", takenDate, "src_kind", srcKind)
 	_, err = media.PrepareJob(spool, jobID, kind, src)
 	if err != nil {
 		p.failMedia(ctx, mediaID, &row, "spool", err.Error())
@@ -86,6 +99,12 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 		}
 		p.failMedia(ctx, mediaID, &row, code, msg)
 		return nil
+	}
+	if kind == "video" && result.TakenISO != "" {
+		takenSort, takenDate, srcKind = media.ResolveTaken(src, kind, hint, time.Now().UTC(), result.TakenISO)
+		if err := media.ApplyTaken(ctx, p.db, mediaID, takenSort, takenDate, srcKind); err != nil {
+			p.log.Info("apply taken failed", "media_id", mediaID, "err", err.Error())
+		}
 	}
 	outDir := filepath.Join(spool, "out", jobID)
 	if err := media.MoveRunnerOutputs(p.uploads.RootDir, row.OwnerID, mediaPub, outDir, result.Variants); err != nil {
@@ -108,7 +127,7 @@ func (p *Processor) derive(ctx context.Context, payload []byte) error {
 	}
 	media.DeleteIncoming(p.uploads, &row)
 	media.CleanupJob(spool, jobID)
-	p.log.Info("derive complete", "upload_id", row.ID, "media_id", mediaID, "pub", mediaPub)
+	p.log.Info("derive complete", "upload_id", row.ID, "media_id", mediaID, "pub", mediaPub, "taken_date", takenDate, "src_kind", srcKind)
 	return nil
 }
 

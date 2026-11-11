@@ -19,14 +19,15 @@ type JobManifest struct {
 
 // JobResult is written by media-runner.
 type JobResult struct {
-	OK          bool             `json:"ok"`
-	ErrorCode   string           `json:"error_code,omitempty"`
+	OK           bool            `json:"ok"`
+	ErrorCode    string          `json:"error_code,omitempty"`
 	ErrorMessage string          `json:"error_message,omitempty"`
-	Width       int              `json:"width,omitempty"`
-	Height      int              `json:"height,omitempty"`
-	DurationMs  uint64           `json:"duration_ms,omitempty"`
-	Variants    []VariantResult  `json:"variants,omitempty"`
-	Metrics     *RunnerMetrics   `json:"metrics,omitempty"`
+	Width        int             `json:"width,omitempty"`
+	Height       int             `json:"height,omitempty"`
+	DurationMs   uint64          `json:"duration_ms,omitempty"`
+	TakenISO     string          `json:"taken_iso,omitempty"` // video container creation_time
+	Variants     []VariantResult `json:"variants,omitempty"`
+	Metrics      *RunnerMetrics  `json:"metrics,omitempty"`
 }
 
 type VariantResult struct {

@@ -142,6 +142,19 @@ derive_photo() {
     >"$OUT_DIR/result.json"
 }
 
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+video_taken_iso() {
+  src="$1"
+  t="$(ffprobe -v error -show_entries format_tags=creation_time -of default=noprint_wrappers=1:nokey=1 "$src" 2>/dev/null | tr -d '\r' | head -1)"
+  if [ -z "$t" ]; then
+    t="$(ffprobe -v error -select_streams v:0 -show_entries stream_tags=creation_time -of default=noprint_wrappers=1:nokey=1 "$src" 2>/dev/null | tr -d '\r' | head -1)"
+  fi
+  printf '%s' "$t"
+}
+
 derive_video() {
   src="$1"
   dur=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$src" 2>/dev/null || echo 0)
@@ -149,6 +162,8 @@ derive_video() {
   if [ "$dur_ms" -gt 3600000 ]; then
     fail video_too_long "Видео длиннее 60 минут"
   fi
+
+  taken_iso="$(video_taken_iso "$src")"
 
   transfer=$(ffprobe -v error -select_streams v:0 -show_entries stream=color_transfer -of csv=p=0 "$src" 2>/dev/null | tr -d '\r')
   vf="scale='min(1920,iw)':-2:force_original_aspect_ratio=decrease,setsar=1"
@@ -179,8 +194,12 @@ derive_video() {
   ph="${ph:-0}"
 
   finalize_metrics
-  printf '{"ok":true,"width":%s,"height":%s,"duration_ms":%s,"variants":[{"variant":"video","file":"video.mp4","mime":"video/mp4","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"poster","file":"poster.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
-    "$vw" "$vh" "$dur_ms" "$vb" "$vw" "$vh" "$(sha256_file "$OUT_DIR/video.mp4")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/poster.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
+  taken_json=""
+  if [ -n "$taken_iso" ]; then
+    taken_json=",\"taken_iso\":\"$(json_escape "$taken_iso")\""
+  fi
+  printf '{"ok":true,"width":%s,"height":%s,"duration_ms":%s%s,"variants":[{"variant":"video","file":"video.mp4","mime":"video/mp4","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"poster","file":"poster.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
+    "$vw" "$vh" "$dur_ms" "$taken_json" "$vb" "$vw" "$vh" "$(sha256_file "$OUT_DIR/video.mp4")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/poster.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
 }
 
 case "$KIND" in

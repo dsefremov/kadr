@@ -36,8 +36,11 @@ func (s *Server) postUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Upload-Length required", http.StatusBadRequest)
 		return
 	}
-	kind := upload.ParseKindFromMetadata(r.Header.Get("Upload-Metadata"))
-	row, err := s.uploads.Create(r.Context(), sess.UserID, uint64(length), kind)
+	meta := upload.ParseMetadata(r.Header.Get("Upload-Metadata"))
+	row, err := s.uploads.Create(r.Context(), sess.UserID, uint64(length), meta.Kind, upload.CreateOpts{
+		Filename: meta.Filename,
+		MTime:    meta.MTime,
+	})
 	if errors.Is(err, upload.ErrLength) {
 		http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
 		return
@@ -61,7 +64,7 @@ func (s *Server) postUpload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", loc)
 	w.Header().Set("Tus-Resumable", upload.TusVersion)
 	w.Header().Set("Upload-Offset", "0")
-	w.Header().Set("Tus-Max-Size", strconv.FormatInt(int64(maxSize(kind)), 10))
+	w.Header().Set("Tus-Max-Size", strconv.FormatInt(int64(maxSize(row.Kind)), 10))
 	w.WriteHeader(http.StatusCreated)
 }
 
