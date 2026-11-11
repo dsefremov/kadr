@@ -48,7 +48,7 @@ export async function registerVerifyLogin(page: Page, request: APIRequestContext
 }
 
 export function screenshotDir(
-  stage: 'stage-2' | 'stage-3' | 'stage-4' | 'stage-5' | 'stage-6' = 'stage-2',
+  stage: 'stage-2' | 'stage-3' | 'stage-4' | 'stage-5' | 'stage-6' | 'stage-7' = 'stage-2',
 ): string {
   return `../docs/${stage}/screenshots`
 }

@@ -86,7 +86,7 @@ export function AccountPage() {
             limit={me.quota_limit ?? 0}
             status={me.quota_status}
           />
-          <p className="note">Квота по умолчанию — 5 ГБ (1 ГБ = 1000 МБ). Корзина входит в квоту.</p>
+          <p className="note">Квота по умолчанию — 1 ГБ (1 ГБ = 1000 МБ). Корзина входит в квоту.</p>
         </div>
       ) : null}
       <div className="panel panel-danger" data-testid="account-delete-section">

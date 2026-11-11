@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { QuotaBar, QuotaExceededBanner, QuotaWarningBanner } from '../components/QuotaBar'
-import { Shell } from '../components/Shell'
+import { QuotaExceededBanner, QuotaWarningBanner } from '../components/QuotaBar'
+import { AppShell } from '../components/AppShell'
 import { Timeline } from '../components/Timeline'
+import type { Bucket } from '../components/TimelineScrub'
 import {
   createTusUpload,
   DuplicateUploadError,
@@ -44,8 +45,18 @@ export function HomePage() {
   const [quotaExceeded, setQuotaExceeded] = useState<{ need?: number; free: number } | null>(null)
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [timelineItems, setTimelineItems] = useState<
-    { id: string; kind: string; width?: number; height?: number; urls?: Record<string, string> }[]
+    {
+      id: string
+      kind: string
+      width?: number
+      height?: number
+      duration_ms?: number
+      taken_date?: string
+      urls?: Record<string, string>
+    }[]
   >([])
+  const [buckets, setBuckets] = useState<Bucket[]>([])
+  const [activeMonth, setActiveMonth] = useState<string | undefined>()
   const [mediaProcessing, setMediaProcessing] = useState<
     { id: string; kind: string; state: string; error?: string }[]
   >([])
@@ -68,9 +79,13 @@ export function HomePage() {
 
   const refreshTimeline = useCallback(() => {
     if (!me?.feed_id) return
-    fetch(`/api/feeds/${me.feed_id}/timeline`, { credentials: 'include' })
+    fetch(`/api/feeds/${me.feed_id}/timeline?limit=100`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((t) => setTimelineItems((t.items ?? []) as typeof timelineItems))
+      .catch(() => undefined)
+    fetch(`/api/feeds/${me.feed_id}/timeline/buckets`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { buckets: [] }))
+      .then((b) => setBuckets((b.buckets ?? []) as Bucket[]))
       .catch(() => undefined)
     fetch('/api/me/media?status=processing', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { media: [] }))
@@ -224,8 +239,24 @@ export function HomePage() {
     }
   }
 
+  const quotaProps =
+    me?.quota_limit != null
+      ? {
+          limit: me.quota_limit,
+          used: me.quota_used ?? 0,
+          trash: me.quota_trash ?? 0,
+          reserved: me.quota_reserved ?? 0,
+          status: me.quota_status,
+        }
+      : null
+
+  function onScrubJump(_anchorId: string, month: string) {
+    setActiveMonth(month)
+    document.getElementById(`month-${month}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
-    <Shell>
+    <AppShell quota={quotaProps} onUpload={() => inputRef.current?.click()}>
       {me && !me.email_verified ? (
         <div className="banner warn" role="status" data-testid="unverified-banner">
           <div>
@@ -238,7 +269,7 @@ export function HomePage() {
       ) : null}
       <div className="feedhead">
         <div>
-          <h1>Кадр</h1>
+          <h1>Моя лента</h1>
           <p data-testid="home-status">
             {me
               ? `Вы вошли как ${me.email}${me.handle ? ` (@${me.handle})` : ''}`
@@ -263,14 +294,18 @@ export function HomePage() {
       </div>
       {me?.email_verified ? (
         <>
-          {me.quota_limit ? (
-            <QuotaBar
-              used={me.quota_used ?? 0}
-              trash={me.quota_trash ?? 0}
-              reserved={me.quota_reserved ?? 0}
-              limit={me.quota_limit}
-              status={me.quota_status}
-            />
+          {mediaProcessing.length > 0 ? (
+            <div className="banner" data-testid="processing-banner">
+              <div>
+                <div className="t1">{mediaProcessing.length} файл(ов) обрабатывается</div>
+                <p className="note" style={{ margin: 0 }}>
+                  Появятся в ленте через пару минут.
+                </p>
+              </div>
+              <button type="button" className="btn sm" data-testid="open-uploads" onClick={() => navigate('/uploads')}>
+                Открыть загрузки
+              </button>
+            </div>
           ) : null}
           {me.quota_status === 'warning' ? (
             <QuotaWarningBanner
@@ -375,16 +410,15 @@ export function HomePage() {
                 <button type="button" className="btn sm" data-testid="visibility-toggle" onClick={onVisibilityClick}>
                   {me.feed_visibility === 'public' ? 'публичная' : 'личная'}
                 </button>
-                {' · '}
-                <button type="button" className="btn sm" data-testid="open-trash" onClick={() => navigate('/trash')}>
-                  Корзина
-                </button>
-                {' · '}
-                <button type="button" className="btn sm" data-testid="open-account" onClick={() => navigate('/account')}>
-                  Аккаунт
-                </button>
               </p>
-              <Timeline items={timelineItems} processing={mediaProcessing} onTrash={(id) => void trashMedia(id)} />
+              <Timeline
+                items={timelineItems}
+                processing={[]}
+                buckets={buckets}
+                activeMonth={activeMonth}
+                onScrubJump={onScrubJump}
+                onTrash={(id) => void trashMedia(id)}
+              />
             </>
           ) : null}
         </>
@@ -408,6 +442,6 @@ export function HomePage() {
       >
         <p>Ваша лента станет видна всем по ссылке. Продолжить?</p>
       </ConfirmModal>
-    </Shell>
+    </AppShell>
   )
 }

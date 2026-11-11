@@ -15,6 +15,6 @@ describe('App', () => {
     )
     render(<App />)
     expect(screen.getByTestId('kadr-app')).toBeTruthy()
-    expect(await screen.findByRole('heading', { name: 'Кадр' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Моя лента' })).toBeTruthy()
   })
 })
