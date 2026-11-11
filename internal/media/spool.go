@@ -57,6 +57,14 @@ func PrepareJob(spool, jobID, kind, srcPath string) (jobDir string, err error) {
 		return "", err
 	}
 	inName := "input" + filepath.Ext(srcPath)
+	if filepath.Ext(srcPath) == "" {
+		// tus stores bare public IDs; give ffmpeg a hint by kind.
+		if kind == "video" {
+			inName = "input.mkv"
+		} else {
+			inName = "input.bin"
+		}
+	}
 	if err := copyFile(srcPath, filepath.Join(jobDir, inName)); err != nil {
 		return "", err
 	}
