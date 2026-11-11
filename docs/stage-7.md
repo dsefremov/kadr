@@ -107,17 +107,16 @@ cd web && PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088 MAILPIT_URL=http://127.0.0.1
 | `ci-integration.sh` + bridge env (`compose-dev-bridge-env.sh`) | OK |
 | `media-runner smoke` | OK |
 | `ci-media-benchmarks.sh` / pipeline / timeline smoke | OK |
-| **Playwright + axe (все спеки, proxy :8088)** | **локально**: **21 passed / 45 failed / 0 skipped** (66 тестов), `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088`, head **`0c1f440c2981c984cfad5c92e5208b11a40ebc80`** — job `docker-integration` **не запускался** (PR → develop, runs 42985075954 / 42985072620 **skipped**) |
-| Playwright итог (последние строки лога) | см. ниже |
+| **Playwright + axe (все спеки, proxy :8088)** | **локально**: **66 passed / 0 failed / 0 skipped** (2026-11-11), `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088`, head см. финальный docs-коммит этого PR — `docker-integration` в PR→`develop` по-прежнему только `workflow_dispatch` / `main` |
+| Playwright итог (последние строки лога) | `66 passed (5.2m)` |
 
 ### Playwright (локальный полный прогон)
 
 ```text
-  45 failed
-  21 passed (1.9h)
+  66 passed (5.2m)
 ```
 
-Основные падения: `timeline-item` / upload-derived specs (очередь worker, синхронизация ленты в UI); auth/placeholder/stage2–3 в основном зелёные. Инфра: SMTP worker → `KADR_SMTP_HOST=bridge-gateway`, nginx `KADR_API_UPSTREAM=http://<gateway>:8080`.
+Локально: `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml`, drain job queue, proxy **:8088**. Dev-скрипты: `scripts/playwright-local.sh` (не меняет `ci-integration.sh`).
 
 ## CI (PR → develop)
 
