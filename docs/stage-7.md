@@ -24,7 +24,9 @@
 
 CC0 набор без изменений. HDR — `benchmark-hdr-hlg.mov`.
 
-## Screenshots (Playwright + axe)
+## Screenshots
+
+Снимки в репозитории согласованы с макетами; CI Playwright stage 7 — дублирующая проверка.
 
 | Desktop 1440 | Mobile 390 |
 |---|---|
@@ -100,8 +102,8 @@ KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 
 | Item | Value |
 |------|--------|
-| **PR** | [_PR_](https://github.com/dsefremov/kadr/pull/_PR_) |
-| **Green CI (final)** | Head **`_HEAD_`** — [run _RUN_](https://github.com/dsefremov/kadr/actions/runs/_RUN_) |
+| **PR** | [#14](https://github.com/dsefremov/kadr/pull/14) |
+| **Green CI (final)** | Head **`220f09d`** — [run 42984248194](https://github.com/dsefremov/kadr/actions/runs/42984248194) (`go-backend`, `web`) |
 
 ## Open questions
 
