@@ -93,28 +93,38 @@ CC0 набор без изменений. HDR — `benchmark-hdr-hlg.mov`.
 ## Local docker-integration
 
 ```bash
+./scripts/playwright-local.sh   # dev-only: bridge SMTP/mailpit, proxy :8088, drain job queue, full e2e
+# или вручную:
 lsof -i :8088 -t | xargs -r kill -9
 export COMPOSE_PROFILES=dev
-KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
+KADR_KEEP_UP=1 ./scripts/ci-integration.sh
+cd web && PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088 MAILPIT_URL=http://127.0.0.1:8025 npm run test:e2e
 ```
 
 | Step | Result (agent VM, 2026-11-11) |
 |------|--------------------------------|
-| migrate **v7** (`000007_default_quota_1gb`) | OK (новые users → 1 ГБ) |
-| `ci-integration.sh` (full, port 8088 free) | **OK** (EXIT 0) |
-| `media-runner smoke` (derive HDR) | OK |
-| `ci-media-benchmarks.sh` | OK — HDR **276.7 MiB** / 768 |
-| `ci-media-pipeline.sh` | OK |
-| `ci-timeline-smoke.sh` | OK |
-| `measure-memory.sh` | api ~43 MiB |
-| Playwright stage 7 | **CI** (локально: vite→:8080 API; proxy :8088 SMTP timeout) |
+| migrate **v7** (`000007_default_quota_1gb`) | OK |
+| `ci-integration.sh` + bridge env (`compose-dev-bridge-env.sh`) | OK |
+| `media-runner smoke` | OK |
+| `ci-media-benchmarks.sh` / pipeline / timeline smoke | OK |
+| **Playwright + axe (все спеки, proxy :8088)** | **локально**: **21 passed / 45 failed / 0 skipped** (66 тестов), `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088`, head **`0c1f440c2981c984cfad5c92e5208b11a40ebc80`** — job `docker-integration` **не запускался** (PR → develop, runs 42985075954 / 42985072620 **skipped**) |
+| Playwright итог (последние строки лога) | см. ниже |
+
+### Playwright (локальный полный прогон)
+
+```text
+  45 failed
+  21 passed (1.9h)
+```
+
+Основные падения: `timeline-item` / upload-derived specs (очередь worker, синхронизация ленты в UI); auth/placeholder/stage2–3 в основном зелёные. Инфра: SMTP worker → `KADR_SMTP_HOST=bridge-gateway`, nginx `KADR_API_UPSTREAM=http://<gateway>:8080`.
 
 ## CI (PR → develop)
 
 | Item | Value |
 |------|--------|
 | **PR** | [#14](https://github.com/dsefremov/kadr/pull/14) |
-| **Green CI (final)** | Head **`a230501`** — [run 42984859971](https://github.com/dsefremov/kadr/actions/runs/42984859971) (`go-backend`, `web`) |
+| **Green CI (final)** | Head **`0c1f440c2981c984cfad5c92e5208b11a40ebc80`** — `go-backend` + `web` на push (Playwright только в `docker-integration` при `workflow_dispatch` или PR→`main`) |
 
 ## Open questions
 
