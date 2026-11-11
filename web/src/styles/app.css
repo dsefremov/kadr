@@ -294,6 +294,27 @@ a {
   max-width: 520px;
   margin: 0 auto 16px;
 }
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.top-actions .quota {
+  margin: 0;
+  max-width: 160px;
+  justify-content: center;
+}
+.top-actions .quota.compact {
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: right;
+}
+.top-actions .quota .bar {
+  height: 6px;
+  width: 100%;
+  min-width: 120px;
+}
 .quota {
   display: flex;
   flex-direction: column;
@@ -667,9 +688,12 @@ body.hasnav {
 .hide-m {
   display: block;
 }
+.top-actions.hide-m {
+  display: flex;
+}
 @media (max-width: 800px) {
   .top nav,
-  .top .quota.hide-m,
+  .top .top-actions.hide-m,
   .hide-m {
     display: none;
   }
