@@ -9,6 +9,7 @@ import (
 	"github.com/dsefremov/kadr/internal/auth"
 	"github.com/dsefremov/kadr/internal/feed"
 	"github.com/dsefremov/kadr/internal/httpx"
+	"github.com/dsefremov/kadr/internal/quota"
 	"github.com/dsefremov/kadr/internal/ratelimit"
 	"github.com/dsefremov/kadr/internal/session"
 )
@@ -21,6 +22,8 @@ func (s *Server) registerAuthRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/logout", s.postLogout)
 	mux.HandleFunc("POST /api/auth/password/reset", s.postPasswordReset)
 	mux.HandleFunc("GET /api/me", s.getMe)
+	mux.HandleFunc("GET /api/me/account", s.getAccount)
+	mux.HandleFunc("POST /api/me/delete-account", s.postDeleteAccount)
 }
 
 type registerBody struct {
@@ -181,9 +184,12 @@ func (s *Server) getMe(w http.ResponseWriter, r *http.Request) {
 		SELECT used_bytes, trash_bytes, reserved_bytes, quota_bytes FROM users WHERE id = ?`, sess.UserID).
 		Scan(&used, &trash, &reserved, &limit)
 	feedMeta, _ := feed.ForOwner(r.Context(), s.db, sess.UserID)
+	free := quota.FreeBytes(used, trash, reserved, limit)
 	out := map[string]any{
 		"email": sess.Email, "email_verified": sess.Verified,
 		"quota_limit": limit, "quota_used": used, "quota_trash": trash, "quota_reserved": reserved,
+		"quota_free": free, "quota_status": quota.StatusFor(used, trash, reserved, limit),
+		"quota_accounted": quota.Accounted(used, trash, reserved),
 	}
 	if feedMeta != nil {
 		out["handle"] = feedMeta.Handle
@@ -191,6 +197,48 @@ func (s *Server) getMe(w http.ResponseWriter, r *http.Request) {
 		out["feed_visibility"] = feedMeta.Visibility
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) getAccount(w http.ResponseWriter, r *http.Request) {
+	s.getMe(w, r)
+}
+
+type deleteAccountBody struct {
+	Password string `json:"password"`
+}
+
+func (s *Server) postDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	sess := s.currentSession(r)
+	if sess == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	var body deleteAccountBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Password == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+		return
+	}
+	err := s.auth.RequestDelete(r.Context(), sess.UserID, body.Password)
+	if errors.Is(err, auth.ErrDeleteBadPassword) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_password"})
+		return
+	}
+	if errors.Is(err, auth.ErrDeleteInProgress) {
+		writeJSON(w, http.StatusConflict, map[string]string{"status": "deleting"})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "server error"})
+		return
+	}
+	if c, err := r.Cookie(session.CookieName); err == nil {
+		_ = s.sessions.Revoke(r.Context(), c.Value)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: session.CookieName, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: true, Secure: s.opts.CookieSecure, SameSite: http.SameSiteLaxMode,
+	})
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleting"})
 }
 
 func (s *Server) currentSession(r *http.Request) *session.Data {

@@ -42,6 +42,10 @@ func (p *Processor) Process(ctx context.Context, j *jobs.Job) error {
 			return fmt.Errorf("spool not writable at %s", media.SpoolRoot())
 		}
 		return p.derive(ctx, j.Payload)
+	case jobs.KindPurgeTrash:
+		return p.purgeTrash(ctx, j.Payload)
+	case jobs.KindDeleteAccount:
+		return p.deleteAccount(ctx, j.Payload)
 	default:
 		p.log.Warn("unknown job kind", "kind", j.Kind)
 		return nil

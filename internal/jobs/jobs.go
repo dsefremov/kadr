@@ -14,6 +14,8 @@ const (
 	KindExpireUpload      = "expire_upload"
 	KindCleanupUnverified = "cleanup_unverified"
 	KindDerive            = "derive"
+	KindPurgeTrash        = "purge_trash"
+	KindDeleteAccount     = "delete_account"
 	LeaseDuration         = 2 * time.Minute
 	MaxAttempts           = 5
 )

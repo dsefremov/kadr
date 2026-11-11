@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -46,8 +47,20 @@ func (s *Server) serveMedia(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	var trashed sql.NullTime
+	_ = s.db.QueryRowContext(r.Context(), `SELECT trashed_at FROM media WHERE public_id = ?`, mediaID).Scan(&trashed)
 	sess := s.currentSession(r)
-	if row.State != "ready" || visibility != "public" && (sess == nil || sess.UserID != ownerID) {
+	owner := sess != nil && sess.UserID == ownerID
+	if row.State != "ready" {
+		http.NotFound(w, r)
+		return
+	}
+	if trashed.Valid {
+		if !owner {
+			http.NotFound(w, r)
+			return
+		}
+	} else if visibility != "public" && !owner {
 		http.NotFound(w, r)
 		return
 	}
