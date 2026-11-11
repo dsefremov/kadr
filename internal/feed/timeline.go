@@ -91,6 +91,9 @@ func TimelineForFeed(ctx context.Context, db *sql.DB, feedPublicID string, curso
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	if items == nil {
+		items = []any{}
+	}
 	var next *string
 	if len(items) > limit {
 		items = items[:limit]

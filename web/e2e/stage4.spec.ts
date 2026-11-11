@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { registerVerifyLogin } from './helpers'
+import { registerVerifyLogin, waitForTimelineReady } from './helpers'
 
 test('upload processes and shows in timeline', async ({ page, request }) => {
   test.setTimeout(180_000)
@@ -10,7 +10,7 @@ test('upload processes and shows in timeline', async ({ page, request }) => {
   const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
   await page.getByTestId('upload-input').setInputFiles(fixture)
   await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
-  await expect(page.getByTestId('timeline-item')).toBeVisible({ timeout: 120_000 })
+  await waitForTimelineReady(page, 1)
   await expect(page.getByTestId('timeline-count')).toHaveText('Готово: 1')
   const a11y = await new AxeBuilder({ page }).analyze()
   expect(a11y.violations).toEqual([])

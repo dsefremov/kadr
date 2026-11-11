@@ -31,6 +31,9 @@ export function Timeline({ items, processing, buckets = [], activeMonth, onTrash
 
   return (
     <div className="layout" data-testid="timeline">
+      <p className="note" data-testid="timeline-count">
+        Готово: {items.length}
+      </p>
       <div className="tl">
         {processing.length > 0 ? (
           <ul className="processing-list" data-testid="media-processing-list">
