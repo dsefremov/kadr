@@ -64,6 +64,19 @@ func TestSniffKindFixtures(t *testing.T) {
 	}
 }
 
+func TestSniffKindMatroskaMagic(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "bare") // no extension (tus incoming key)
+	// EBML header used by MKV / WebM
+	data := []byte{0x1a, 0x45, 0xdf, 0xa3, 0xa3, 0x42, 0x86, 0x81, 0x01, 0x42, 0xf7, 0x81, 0x01, 0x42, 0xf2, 0x81}
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	k, err := SniffKind(tmp)
+	if err != nil || k != "video" {
+		t.Fatalf("mkv magic: %q %v", k, err)
+	}
+}
+
 func TestAnimatedRejectsGIF(t *testing.T) {
 	// minimal GIF with animation extension
 	gif := []byte("GIF89a\x00\x00\x00\x00!\xff\x0bNETSCAPE2.0")

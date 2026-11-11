@@ -7,7 +7,7 @@ const (
 
 	DefaultQuotaBytes = 1 * GB
 	PhotoMaxBytes     = 50 * MB
-	VideoMaxBytes     = 2 * GB
+	VideoMaxBytes     = 200 * MB
 
 	// VideoMaxDurationMs — Den 2026-11-10: reject videos longer than 60 minutes.
 	VideoMaxDurationMs = 60 * 60 * 1000

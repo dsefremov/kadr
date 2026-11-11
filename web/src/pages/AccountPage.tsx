@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { QuotaBar } from '../components/QuotaBar'
-import { Shell } from '../components/Shell'
+import { AppShell } from '../components/AppShell'
+import { createTusUpload, type TusUploadControl } from '../lib/tusUpload'
 
 type Me = {
   email: string
+  email_verified?: boolean
   handle?: string
   quota_limit?: number
   quota_used?: number
@@ -15,17 +17,27 @@ type Me = {
 }
 
 export function AccountPage() {
+  const navigate = useNavigate()
   const [me, setMe] = useState<Me | null>(null)
+  const [guest, setGuest] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [err, setErr] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const activeRef = useRef<TusUploadControl | null>(null)
 
   useEffect(() => {
     fetch('/api/me', { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (r.status === 401) {
+          setGuest(true)
+          return null
+        }
+        return r.ok ? r.json() : null
+      })
       .then((d) => setMe(d))
-      .catch(() => undefined)
+      .catch(() => setGuest(true))
   }, [])
 
   async function confirmDelete() {
@@ -49,9 +61,33 @@ export function AccountPage() {
     }
   }
 
+  async function onFile(file: File) {
+    const kind = file.type.startsWith('video/') ? 'video' : 'photo'
+    if (activeRef.current) activeRef.current.abort(false)
+    const control = createTusUpload(file, kind, {})
+    activeRef.current = control
+    try {
+      await control.promise
+      navigate('/')
+    } finally {
+      activeRef.current = null
+    }
+  }
+
+  const quota =
+    me?.quota_limit != null
+      ? {
+          limit: me.quota_limit,
+          used: me.quota_used ?? 0,
+          trash: me.quota_trash ?? 0,
+          reserved: me.quota_reserved ?? 0,
+          status: me.quota_status,
+        }
+      : null
+
   if (deleting) {
     return (
-      <Shell>
+      <AppShell>
         <div className="panel" data-testid="account-delete-progress">
           <h2>Удаление аккаунта</h2>
           <p>Сессии завершены, данные удаляются в фоне. Эту страницу можно закрыть.</p>
@@ -59,17 +95,45 @@ export function AccountPage() {
             Зарегистрироваться снова
           </Link>
         </div>
-      </Shell>
+      </AppShell>
+    )
+  }
+
+  if (guest) {
+    return (
+      <AppShell>
+        <div className="feedhead">
+          <div>
+            <h1>Аккаунт</h1>
+          </div>
+        </div>
+        <p className="note">
+          <Link to="/login">Войдите</Link>, чтобы открыть настройки аккаунта.
+        </p>
+      </AppShell>
     )
   }
 
   return (
-    <Shell>
+    <AppShell quota={quota} onUpload={me?.email_verified ? () => inputRef.current?.click() : undefined}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,video/*"
+        style={{ display: 'none' }}
+        data-testid="account-file-input"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void onFile(f)
+          e.target.value = ''
+        }}
+      />
       <div className="feedhead">
         <div>
           <h1>Аккаунт</h1>
           <p className="note" data-testid="account-email">
             {me?.email ?? '…'}
+            {me?.handle ? ` (@${me.handle})` : ''}
           </p>
         </div>
         <Link className="btn sm" to="/">
@@ -118,6 +182,6 @@ export function AccountPage() {
         </label>
         {err ? <p className="hint bad">{err}</p> : null}
       </ConfirmModal>
-    </Shell>
+    </AppShell>
   )
 }

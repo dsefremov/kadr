@@ -13,12 +13,13 @@ import (
 )
 
 // SniffKind returns photo, video, or empty if unsupported.
+// Incoming tus files often have no extension — sniff magic bytes too.
 func SniffKind(path string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif":
 		return "photo", nil
-	case ".mp4", ".mov":
+	case ".mp4", ".mov", ".m4v", ".mkv", ".webm":
 		return "video", nil
 	}
 	f, err := os.Open(path)
@@ -38,7 +39,12 @@ func SniffKind(path string) (string, error) {
 	if len(head) >= 12 && string(head[8:12]) == "webp" {
 		return "photo", nil
 	}
+	// ISO BMFF (MP4 / MOV / M4V)
 	if bytes.Contains(head, []byte("ftyp")) {
+		return "video", nil
+	}
+	// Matroska / WebM (EBML)
+	if bytes.HasPrefix(head, []byte{0x1a, 0x45, 0xdf, 0xa3}) {
 		return "video", nil
 	}
 	return "", fmt.Errorf("%w: extension %s", ErrUnsupported, ext)
