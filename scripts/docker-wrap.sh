@@ -6,6 +6,7 @@ docker_wrap_env_prefix() {
   local out=()
   local names=(
     COMPOSE_PROFILES
+    COMPOSE_FILE
     KADR_MYSQL_DSN
     KADR_SMTP_HOST
     KADR_SMTP_PORT
@@ -29,20 +30,26 @@ docker_wrap_env_prefix() {
 
 _sg_docker() {
   local cmd=$1
+  # Prefer passwordless sudo sg on agents where the user is not in group docker (sg alone prompts).
+  if sudo -n sg docker -c "$cmd" </dev/null 2>/dev/null; then
+    return 0
+  fi
   if sg docker -c "$cmd" </dev/null 2>/dev/null; then
     return 0
   fi
   sudo -n sg docker -c "$cmd"
 }
 
+DOCKER_BIN="${DOCKER_BIN:-/usr/bin/docker}"
+
 docker_wrap() {
-  if docker info >/dev/null 2>&1; then
-    docker "$@"
+  if "${DOCKER_BIN}" info >/dev/null 2>&1; then
+    "${DOCKER_BIN}" "$@"
     return
   fi
   local prefix
   prefix="$(docker_wrap_env_prefix)"
-  local inner="${prefix}docker $(printf '%q ' "$@")"
+  local inner="${prefix}${DOCKER_BIN} $(printf '%q ' "$@")"
   _sg_docker "$inner"
 }
 

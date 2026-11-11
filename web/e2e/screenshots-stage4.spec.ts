@@ -10,11 +10,11 @@ for (const { slug, width, height } of [
   test(`stage 4 screenshots ${slug}`, async ({ page, request }) => {
     test.setTimeout(180_000)
     const out = screenshotDir('stage-4')
-    await page.setViewportSize({ width, height })
     await registerVerifyLogin(page, request)
     const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
     await page.getByTestId('upload-input').setInputFiles(fixture)
     await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
+    await page.setViewportSize({ width, height })
     await page.getByTestId('upload-progress').waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined)
     await page.screenshot({ path: `${out}/processing-${slug}.png`, fullPage: true })
     await waitForTimelineReady(page, 1)

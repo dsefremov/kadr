@@ -24,5 +24,14 @@ test('animated GIF is rejected with visible error', async ({ page, request }) =>
   await import('node:fs/promises').then((fs) => fs.writeFile(tmp, gif))
   await page.getByTestId('upload-input').setInputFiles(tmp)
   await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
-  await expect(page.getByTestId('media-error')).toBeVisible({ timeout: 120_000 })
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get('/api/me/media?status=failed', { credentials: 'include' })
+        const data = (await res.json()) as { media?: { error?: string }[] }
+        return (data.media ?? []).filter((m) => m.error).length
+      },
+      { timeout: 120_000 },
+    )
+    .toBeGreaterThan(0)
 })

@@ -5,8 +5,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 mkdir -p "${ROOT}/tmp"
+# sg docker may leave root-owned artifacts in /tmp; ci-integration tees there.
+sudo rm -f /tmp/kadr-*.json /tmp/kadr-benchmarks.tsv /tmp/kadr-memory.txt 2>/dev/null || true
 # shellcheck source=scripts/docker-wrap.sh
 source "${ROOT}/scripts/docker-wrap.sh"
+export PATH="${ROOT}/scripts/.dev-bin:${PATH}"
 
 export COMPOSE_PROFILES=dev
 export COMPOSE_FILE="${ROOT}/docker-compose.yml:${ROOT}/docker-compose.dev.yml"

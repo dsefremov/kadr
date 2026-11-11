@@ -103,12 +103,12 @@ export function ViewerPage() {
 
   return (
     <div className={`viewer${infoOpen ? ' info' : ''}`} data-testid="viewer">
-      <div className="vtop">
+      <header className="vtop">
         <button type="button" className="ic" aria-label="Закрыть" data-testid="viewer-close" onClick={() => navigate('/')}>
           ✕
         </button>
         <div>
-          <b data-testid="viewer-title">{title}</b>
+          <b className="viewer-title" data-testid="viewer-title">{title}</b>
           <div className="viewer-sub" data-testid="viewer-position">
             {neighbors.length > 0 ? `${idx + 1} из ${neighbors.length}` : meta.id.slice(0, 8)}
           </div>
@@ -134,11 +134,17 @@ export function ViewerPage() {
           ⓘ
         </button>
         {meta.owner ? (
-          <button type="button" className="ic" data-testid="viewer-change-date" onClick={() => setDateOpen(true)}>
+          <button
+            type="button"
+            className="ic"
+            aria-label="Сменить дату"
+            data-testid="viewer-change-date"
+            onClick={() => setDateOpen(true)}
+          >
             📅
           </button>
         ) : null}
-      </div>
+      </header>
       <div className="vstage">
         {meta.kind === 'video' && videoSrc ? (
           <video src={videoSrc} controls playsInline className="viewer-video" data-testid="viewer-video" />
@@ -160,8 +166,8 @@ export function ViewerPage() {
         {zoom > 1 ? <span className="zoomhud">{Math.round(zoom * 100)}%</span> : null}
       </div>
       {infoOpen ? (
-        <aside className="side" data-testid="viewer-info-panel">
-          <h4>Сведения</h4>
+        <aside className="side" data-testid="viewer-info-panel" aria-label="Сведения о файле">
+          <h2 className="viewer-info-title">Сведения</h2>
           <dl>
             <dt>Тип</dt>
             <dd>{meta.kind === 'video' ? 'Видео' : 'Фото'}</dd>
@@ -188,13 +194,19 @@ export function ViewerPage() {
           </div>
         </aside>
       ) : null}
-      <div className="vbot">
+      <div className="vbot" aria-hidden="true">
         <span>← → соседние</span>
       </div>
       {dateOpen ? (
-        <div className="scrim" role="dialog" aria-modal="true" data-testid="viewer-date-dialog">
+        <div
+          className="scrim"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="viewer-date-dialog-title"
+          data-testid="viewer-date-dialog"
+        >
           <div className="dlg">
-            <h3>Сменить дату</h3>
+            <h3 id="viewer-date-dialog-title">Сменить дату</h3>
             <p className="note">Дата влияет на группировку в ленте.</p>
             <label className="field">
               <span>Дата</span>

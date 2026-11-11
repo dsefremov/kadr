@@ -58,6 +58,33 @@ export async function registerVerifyLogin(page: Page, request: APIRequestContext
 }
 
 /** Poll timeline API, then reload so React state matches (dev/local e2e). */
+export async function openTrash(page: Page) {
+  await page.goto('/trash')
+}
+
+export async function trashFirstTimelineItem(page: Page) {
+  const btn = page.locator('[data-testid^=trash-item-]').first()
+  await btn.scrollIntoViewIfNeeded()
+  await btn.evaluate((el) => {
+    ;(el as HTMLButtonElement).click()
+  })
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(async () => {
+          const me = await fetch('/api/me', { credentials: 'include' }).then((r) => r.json())
+          if (!me.feed_id) return -1
+          const t = await fetch(`/api/feeds/${me.feed_id}/timeline?limit=5`, { credentials: 'include' }).then((r) =>
+            r.json(),
+          )
+          return Array.isArray(t.items) ? t.items.length : 0
+        }),
+      { timeout: 30_000 },
+    )
+    .toBe(0)
+  await page.reload()
+}
+
 export async function waitForTimelineReady(page: Page, minItems = 1) {
   await expect
     .poll(
@@ -73,9 +100,8 @@ export async function waitForTimelineReady(page: Page, minItems = 1) {
       { timeout: 120_000 },
     )
     .toBeGreaterThanOrEqual(minItems)
-  await expect
-    .poll(() => page.getByTestId('timeline-item').count(), { timeout: 60_000 })
-    .toBeGreaterThanOrEqual(minItems)
+  await page.reload()
+  await expect(page.getByTestId('timeline-item')).toHaveCount(minItems, { timeout: 30_000 })
 }
 
 export function screenshotDir(

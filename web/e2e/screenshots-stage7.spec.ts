@@ -10,12 +10,12 @@ for (const { slug, width, height } of [
   test(`stage 7 screenshots ${slug}`, async ({ page, request }) => {
     test.setTimeout(180_000)
     const out = screenshotDir('stage-7')
-    await page.setViewportSize({ width, height })
     await registerVerifyLogin(page, request)
     const fixture = join(process.cwd(), '..', 'fixtures', 'in', 'sample.png')
     await page.getByTestId('upload-input').setInputFiles(fixture)
     await expect(page.getByTestId('upload-message')).toContainText('принята', { timeout: 90_000 })
     await waitForTimelineReady(page, 1)
+    await page.setViewportSize({ width, height })
     await page.screenshot({ path: `${out}/feed-grouped-${slug}.png`, fullPage: true })
     await page.goto('/uploads')
     await expect(page.getByTestId('upload-queue')).toBeVisible()
