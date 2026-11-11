@@ -296,10 +296,17 @@ func (s *Service) expireRow(ctx context.Context, row *Row, state string) error {
 }
 
 func (s *Service) ListActive(ctx context.Context, ownerID int64) ([]Row, error) {
+	// Hide complete uploads once media exists (ready/processing/failed) — otherwise Загрузки
+	// keeps "Отменить" forever after the photo already appears in the feed.
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, public_id, owner_id, kind_declared, upload_length, offset_bytes, incoming_key, state
-		FROM uploads WHERE owner_id = ? AND state IN ('uploading', 'complete')
-		ORDER BY id DESC LIMIT 50`, ownerID)
+		SELECT u.id, u.public_id, u.owner_id, u.kind_declared, u.upload_length, u.offset_bytes, u.incoming_key, u.state
+		FROM uploads u
+		WHERE u.owner_id = ?
+		  AND u.state IN ('uploading', 'complete')
+		  AND NOT EXISTS (
+		    SELECT 1 FROM media m WHERE m.upload_id = u.id
+		  )
+		ORDER BY u.id DESC LIMIT 50`, ownerID)
 	if err != nil {
 		return nil, err
 	}

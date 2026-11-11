@@ -192,6 +192,29 @@ a {
   gap: 8px;
   padding: 8px;
 }
+/* Overlay inside .t (overflow:hidden) — old .timeline-meta below the image was clipped. */
+.t .trash-fab {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(14, 13, 12, 0.72);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.92;
+}
+.t .trash-fab:hover,
+.t .trash-fab:focus-visible {
+  background: rgba(180, 40, 40, 0.92);
+}
 .trash-list {
   list-style: none;
   margin: 24px 0;
