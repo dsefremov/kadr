@@ -176,14 +176,16 @@ export function ViewerPage() {
               </>
             ) : null}
           </dl>
-          {meta.owner ? (
-            <button type="button" className="btn sm" onClick={() => setDateOpen(true)}>
-              Сменить дату
-            </button>
-          ) : null}
-          <Link className="btn sm ghost" to="/">
-            К ленте
-          </Link>
+          <div className="side-acts">
+            {meta.owner ? (
+              <button type="button" className="btn sm" onClick={() => setDateOpen(true)}>
+                Сменить дату
+              </button>
+            ) : null}
+            <Link className="btn sm ghost" to="/">
+              К ленте
+            </Link>
+          </div>
         </aside>
       ) : null}
       <div className="vbot">

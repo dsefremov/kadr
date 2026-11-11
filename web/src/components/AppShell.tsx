@@ -41,8 +41,8 @@ export function AppShell({ children, quota, onUpload }: Props) {
           </Link>
         </nav>
         <span className="sp" />
-        {quota ? (
-          <div className="quota hide-m">
+        <div className="top-actions hide-m">
+          {quota ? (
             <QuotaBar
               used={quota.used}
               trash={quota.trash}
@@ -51,13 +51,13 @@ export function AppShell({ children, quota, onUpload }: Props) {
               status={quota.status}
               compact
             />
-          </div>
-        ) : null}
-        {onUpload ? (
-          <button type="button" className="btn pri hide-m" data-testid="nav-upload" onClick={onUpload}>
-            ＋ Загрузить
-          </button>
-        ) : null}
+          ) : null}
+          {onUpload ? (
+            <button type="button" className="btn pri" data-testid="nav-upload" onClick={onUpload}>
+              ＋ Загрузить
+            </button>
+          ) : null}
+        </div>
       </header>
       <main className="wrap">{children}</main>
       <nav className="mob-nav" aria-label="Мобильная навигация">

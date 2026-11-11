@@ -62,7 +62,9 @@ test('tus photo upload', async ({ page, request }) => {
   })
   expect(patch.status()).toBe(204)
   await page.goto('/')
-  await expect(page.getByTestId('upload-zone')).toBeVisible({ timeout: 30_000 })
+  // Empty feed shows upload-zone; once media lands, only the header 「＋ Загрузить」 remains.
+  await expect(page.getByTestId('upload-input')).toBeAttached({ timeout: 30_000 })
+  await expect(page.getByRole('button', { name: '＋ Загрузить' })).toBeVisible()
 
   const accessibility = await new AxeBuilder({ page }).analyze()
   expect(accessibility.violations).toEqual([])

@@ -50,8 +50,17 @@ export function monthShort(m: number): string {
   return ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][m - 1] ?? ''
 }
 
+/** Normalize API taken_date to YYYY-MM-DD (handles accidental RFC3339 from MySQL DATE scans). */
+export function takenDateKey(raw?: string): string {
+  if (!raw) return '1970-01-01'
+  const m = raw.trim().match(/^(\d{4}-\d{2}-\d{2})/)
+  return m?.[1] ?? '1970-01-01'
+}
+
 export function dayHeading(takenDate: string): string {
-  const d = new Date(`${takenDate}T12:00:00Z`)
+  const key = takenDateKey(takenDate)
+  const d = new Date(`${key}T12:00:00Z`)
+  if (Number.isNaN(d.getTime())) return key
   const now = new Date()
   const utcDay = (x: Date) => Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate())
   const diff = (utcDay(now) - utcDay(d)) / 86400000
@@ -83,7 +92,7 @@ export type MonthBlock = { month: string; days: DayGroup[] }
 export function groupTimeline(items: TimelineLike[]): MonthBlock[] {
   const byMonth = new Map<string, Map<string, TimelineLike[]>>()
   for (const it of items) {
-    const date = it.taken_date ?? '1970-01-01'
+    const date = takenDateKey(it.taken_date)
     const month = date.slice(0, 7)
     if (!byMonth.has(month)) byMonth.set(month, new Map())
     const days = byMonth.get(month)!

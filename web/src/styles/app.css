@@ -192,6 +192,29 @@ a {
   gap: 8px;
   padding: 8px;
 }
+/* Overlay inside .t (overflow:hidden) — old .timeline-meta below the image was clipped. */
+.t .trash-fab {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(14, 13, 12, 0.72);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.92;
+}
+.t .trash-fab:hover,
+.t .trash-fab:focus-visible {
+  background: rgba(180, 40, 40, 0.92);
+}
 .trash-list {
   list-style: none;
   margin: 24px 0;
@@ -270,6 +293,27 @@ a {
   color: var(--ink-2);
   max-width: 520px;
   margin: 0 auto 16px;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.top-actions .quota {
+  margin: 0;
+  max-width: 160px;
+  justify-content: center;
+}
+.top-actions .quota.compact {
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: right;
+}
+.top-actions .quota .bar {
+  height: 6px;
+  width: 100%;
+  min-width: 120px;
 }
 .quota {
   display: flex;
@@ -519,14 +563,18 @@ a {
 .viewer {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
   background: var(--night);
   color: var(--night-ink);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   z-index: 30;
 }
 .viewer.info {
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: minmax(0, 1fr) min(360px, 42vw);
 }
 .vtop,
 .vbot {
@@ -534,6 +582,14 @@ a {
   align-items: center;
   gap: 14px;
   padding: 14px 20px;
+}
+.vtop {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+.vbot {
+  grid-column: 1;
+  grid-row: 3;
 }
 .vtop .ic {
   width: 38px;
@@ -554,17 +610,31 @@ a {
   color: var(--night-ink-2);
 }
 .vstage {
+  grid-column: 1;
+  grid-row: 2;
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  min-width: 0;
   min-height: 0;
+  padding: 8px 12px;
+  box-sizing: border-box;
 }
 .vstage img,
 .viewer-video {
-  max-width: 92%;
+  display: block;
+  max-width: 100%;
   max-height: 100%;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
   object-fit: contain;
+}
+.vstage img.zoom {
+  transform-origin: center center;
 }
 .navarr {
   position: absolute;
@@ -586,6 +656,7 @@ a {
   padding: 22px;
   border-left: 1px solid var(--night-3);
   overflow: auto;
+  min-height: 0;
 }
 .side dl {
   display: grid;
@@ -598,6 +669,25 @@ a {
 }
 .side dd {
   margin: 0;
+}
+.side-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.side .btn {
+  background: var(--night-3);
+  border-color: var(--night-3);
+  color: var(--night-ink);
+}
+.side .btn.ghost {
+  background: transparent;
+  border-color: var(--night-ink-2);
+  color: var(--night-ink);
+}
+.side .btn:hover {
+  filter: brightness(1.12);
 }
 .scrim {
   position: fixed;
@@ -644,9 +734,25 @@ body.hasnav {
 .hide-m {
   display: block;
 }
+.top-actions.hide-m {
+  display: flex;
+}
 @media (max-width: 800px) {
+  .viewer.info {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto minmax(120px, 36vh);
+  }
+  .viewer.info .side {
+    grid-column: 1;
+    grid-row: 4;
+    border-left: 0;
+    border-top: 1px solid var(--night-3);
+  }
+  .viewer.info .vbot {
+    display: none;
+  }
   .top nav,
-  .top .quota.hide-m,
+  .top .top-actions.hide-m,
   .hide-m {
     display: none;
   }

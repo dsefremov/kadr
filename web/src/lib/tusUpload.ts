@@ -86,8 +86,11 @@ function tusEndpoint(): string {
   return base.startsWith('http') ? base : `${window.location.origin}${base}`
 }
 
-function kindMetadata(kind: 'photo' | 'video'): Record<string, string> {
-  return { filetype: kind }
+function uploadMetadata(file: File, kind: 'photo' | 'video'): Record<string, string> {
+  const meta: Record<string, string> = { filetype: kind }
+  if (file.name) meta.filename = file.name
+  if (file.lastModified > 0) meta.mtime = String(file.lastModified)
+  return meta
 }
 
 export function createTusUpload(
@@ -108,7 +111,7 @@ export function createTusUpload(
     uploadUrl: options?.uploadUrl,
     chunkSize,
     retryDelays: [0, 1000, 3000, 5000],
-    metadata: kindMetadata(kind),
+    metadata: uploadMetadata(file, kind),
     headers: {},
     storeFingerprintForResuming: true,
     removeFingerprintOnSuccess: true,
