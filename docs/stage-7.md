@@ -8,7 +8,14 @@
 - **Загрузки:** `/uploads` — макет `upload-queue`, активные tus + обработка, отмена.
 - **Tests:** Go (buckets, taken-date), Vitest (grouping), Playwright + axe stage 7.
 
-**Den / не в scope:** правка квоты из админки — этап 8; secure erase — только **RPO/RTO** в docs ниже; полный `ci-integration` в CI — по-прежнему только `workflow_dispatch` (Den).
+**Den / не в scope:** правка квоты из админки (`/api/admin/settings`, `/api/admin/users/{id}`) — этап 8; secure erase — только **RPO/RTO** в docs ниже; полный `ci-integration` в CI — по-прежнему только `workflow_dispatch` (Den).
+
+### Квота по умолчанию 1 ГБ (Den 2026-11-11)
+
+- **Новые пользователи:** `users.quota_bytes = 1_000_000_000` при регистрации (`internal/units.DefaultQuotaBytes`).
+- **Миграция `000007`:** таблица `system_settings`, ключ `default_quota_bytes = 1_000_000_000` (для этапа 8; регистрация пока читает константу).
+- **Существующие учётки:** в колонке `users.quota_bytes` **не меняем** — у кого при регистрации было 5 ГБ, лимит остаётся 5 ГБ, пока админ не изменит (этап 8).
+- **Порог warning:** по-прежнему **≥90%** учтённых байт.
 
 ## HDR peak memory (768 MiB cap)
 
@@ -33,6 +40,8 @@ CC0 набор без изменений. HDR — `benchmark-hdr-hlg.mov`.
 | ![Feed](screenshots/feed-grouped-desktop-1440.png) | ![Feed mobile](screenshots/feed-grouped-mobile-390.png) |
 | ![Upload queue](screenshots/upload-queue-desktop-1440.png) | ![Queue mobile](screenshots/upload-queue-mobile-390.png) |
 | ![Viewer](screenshots/viewer-photo-desktop-1440.png) | ![Viewer mobile](screenshots/viewer-photo-mobile-390.png) |
+| ![Quota warning](../stage-6/screenshots/quota-warning-desktop-1440.png) | ![Quota warning mobile](../stage-6/screenshots/quota-warning-mobile-390.png) |
+| ![Quota exceeded](../stage-6/screenshots/quota-exceeded-desktop-1440.png) | ![Quota exceeded mobile](../stage-6/screenshots/quota-exceeded-mobile-390.png) |
 
 ## Decisions made
 
@@ -41,6 +50,7 @@ CC0 набор без изменений. HDR — `benchmark-hdr-hlg.mov`.
 | HDR smoke | Единый путь `derive.sh`, не дублировать ffmpeg в smoke |
 | Потоки | 1 CPU VPS: ffmpeg/x264/filter threads = 1 |
 | Смена даты | Патч `taken_date` + `taken_sort` (полдень UTC) |
+| Дефолт квота | **1 ГБ** decimal; legacy users keep stored `quota_bytes` |
 | Scrub | Buckets по `YYYY-MM`, scroll к `month-*` |
 | Стирание v1 | Только политика RPO/RTO (см. ниже), без secure wipe |
 
