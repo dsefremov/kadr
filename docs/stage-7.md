@@ -100,6 +100,7 @@ KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 
 | Step | Result (agent VM, 2026-11-11) |
 |------|--------------------------------|
+| migrate **v7** (`000007_default_quota_1gb`) | OK (новые users → 1 ГБ) |
 | `ci-integration.sh` (full, port 8088 free) | **OK** (EXIT 0) |
 | `media-runner smoke` (derive HDR) | OK |
 | `ci-media-benchmarks.sh` | OK — HDR **276.7 MiB** / 768 |
@@ -113,7 +114,7 @@ KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 | Item | Value |
 |------|--------|
 | **PR** | [#14](https://github.com/dsefremov/kadr/pull/14) |
-| **Green CI (final)** | Head **`220f09d`** — [run 42984248194](https://github.com/dsefremov/kadr/actions/runs/42984248194) (`go-backend`, `web`) |
+| **Green CI (final)** | Head **`a230501`** — [run 42984859971](https://github.com/dsefremov/kadr/actions/runs/42984859971) (`go-backend`, `web`) |
 
 ## Open questions
 
