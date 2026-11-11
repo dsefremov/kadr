@@ -7,6 +7,9 @@ set -eu
 export VIPS_CONCURRENCY=1
 export VIPS_CACHE_MAX="${VIPS_CACHE_MAX:-64}"
 export VIPS_DISC_THRESHOLD="${VIPS_DISC_THRESHOLD:-64m}"
+export OMP_NUM_THREADS=1
+export X264_THREADS=1
+export FFMPEG_THREAD_QUEUE_SIZE="${FFMPEG_THREAD_QUEUE_SIZE:-8}"
 
 JOB_DIR="${1:?job dir}"
 OUT_DIR="${2:-$(dirname "$JOB_DIR")/../out/$(basename "$JOB_DIR")}"
@@ -148,14 +151,15 @@ derive_video() {
   if echo "$transfer" | grep -qiE 'smpte2084|arib-std-b67'; then
     vf="zscale=transfer=linear,tonemap=tonemap=hable:desat=0,zscale=transfer=bt709:matrix=bt709:primaries=bt709,format=yuv420p,$vf"
   fi
+  x264_params="threads=1:lookahead-threads=1:sliced-threads=0:rc-lookahead=10"
 
-  ffmpeg -nostdin -y -threads 1 -i "$src" \
+  ffmpeg -nostdin -y -threads 1 -filter_threads 1 -i "$src" \
     -map 0:v:0? -map 0:a:0? \
-    -c:v libx264 -crf 23 -preset veryfast -threads 1 -vf "$vf" -r 30 \
+    -c:v libx264 -crf 23 -preset veryfast -threads 1 -x264-params "$x264_params" -vf "$vf" -r 30 \
     -c:a aac -b:a 128k -movflags +faststart \
     "$OUT_DIR/video.mp4" 2>"$WORK/ffmpeg.log" || fail transcode "Не удалось обработать видео"
 
-  ffmpeg -nostdin -y -ss 1 -i "$OUT_DIR/video.mp4" -vframes 1 \
+  ffmpeg -nostdin -y -threads 1 -ss 1 -i "$OUT_DIR/video.mp4" -vframes 1 \
     "$WORK/poster.png" 2>/dev/null || ffmpeg -nostdin -y -i "$OUT_DIR/video.mp4" -vframes 1 "$WORK/poster.png"
   vips thumbnail "$WORK/poster.png" "$WORK/poster.v" 1280 --size=both --no-rotate
   vips copy "$WORK/poster.v" "$OUT_DIR/poster.webp[Q=80,strip]"

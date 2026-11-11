@@ -17,7 +17,7 @@ OUT="${OUTPUT_DIR:-/tmp/out}"
 mkdir -p "$OUT"
 
 HEIC="$(find "$IN" -name '*.heic' | head -1)"
-MOV="$(find "$IN" -name '*.mov' | head -1)"
+MOV="$(find "$IN" -name 'benchmark-hdr-hlg.mov' -o -name '*.mov' 2>/dev/null | head -1)"
 if [ -z "$HEIC" ] || [ -z "$MOV" ]; then
   echo "missing fixtures in $IN" >&2
   exit 1
@@ -32,12 +32,17 @@ vips copy "$HEIC" "$MASTER_JPEG[Q=85,strip]"
 # WebP preview q80
 vips copy "$HEIC" "$PREVIEW_WEBP[Q=80,strip]"
 
-# MOV → H.264 MP4 (SDR toolchain check)
-ffmpeg -nostdin -y -i "$MOV" \
-  -map 0:v:0? -map 0:a:0? \
-  -c:v libx264 -crf 23 -preset medium -vf "scale='min(1920,iw)':-2" -r 30 \
-  -c:a aac -b:a 128k -movflags +faststart \
-  "$VIDEO_MP4"
+# HDR-capable path via the same derive pipeline as production (threads=1, tonemap, 768MiB-safe).
+JOB_DIR="/tmp/smoke-derive-$$"
+DERIVE_OUT="/tmp/smoke-out-$$"
+rm -rf "$JOB_DIR" "$DERIVE_OUT"
+mkdir -p "$JOB_DIR"
+ext="${MOV##*.}"
+cp "$MOV" "$JOB_DIR/input.$ext"
+printf '{"job_id":"smoke","kind":"video","input_name":"input.%s"}\n' "$ext" >"$JOB_DIR/manifest.json"
+/opt/kadr/derive.sh "$JOB_DIR" "$DERIVE_OUT"
+cp "$DERIVE_OUT/video.mp4" "$VIDEO_MP4"
+rm -rf "$JOB_DIR" "$DERIVE_OUT"
 
 for f in "$MASTER_JPEG" "$PREVIEW_WEBP" "$VIDEO_MP4"; do
   test -s "$f" || { echo "empty output: $f" >&2; exit 1; }

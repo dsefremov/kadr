@@ -1,16 +1,14 @@
-type TimelineItem = {
-  id: string
-  kind: string
-  width?: number
-  height?: number
-  urls?: {
-    preview_320?: string
-    preview_640?: string
-    preview_1280?: string
-    poster?: string
-    master?: string
-  }
-}
+import { Link } from 'react-router-dom'
+import {
+  dayHeading,
+  dayStats,
+  formatDuration,
+  groupTimeline,
+  monthTitle,
+  tileFlexGrow,
+  type TimelineLike,
+} from '../lib/timelineFormat'
+import { TimelineScrub, type Bucket } from './TimelineScrub'
 
 type ProcessingItem = {
   id: string
@@ -20,72 +18,113 @@ type ProcessingItem = {
 }
 
 type Props = {
-  items: TimelineItem[]
+  items: TimelineLike[]
   processing: ProcessingItem[]
+  buckets?: Bucket[]
+  activeMonth?: string
   onTrash?: (id: string) => void
+  onScrubJump?: (anchorId: string, month: string) => void
 }
 
-export function Timeline({ items, processing, onTrash }: Props) {
+export function Timeline({ items, processing, buckets = [], activeMonth, onTrash, onScrubJump }: Props) {
+  const grouped = groupTimeline(items)
+
   return (
-    <section className="timeline" data-testid="timeline">
-      {processing.length > 0 ? (
-        <ul className="processing-list" data-testid="media-processing-list">
-          {processing.map((p) => (
-            <li key={p.id} data-testid={p.state === 'failed' ? 'media-error' : 'media-processing'}>
-              {p.kind === 'video' ? 'Видео' : 'Фото'} —{' '}
-              {p.state === 'failed' ? `ошибка: ${p.error ?? 'обработка'}` : 'обрабатывается…'}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {items.length === 0 && processing.length === 0 ? (
-        <p className="note" data-testid="timeline-empty">
-          Лента пуста.
-        </p>
-      ) : null}
-      <p data-testid="timeline-count" hidden={items.length === 0}>{`Готово: ${items.length}`}</p>
-      <div className="timeline-grid">
-        {items.map((it) => {
-          const thumb = it.urls?.preview_640 ?? it.urls?.preview_1280 ?? it.urls?.poster ?? it.urls?.master
-          const srcSet =
-            it.urls?.preview_320 && it.urls?.preview_640 && it.urls?.preview_1280
-              ? `${it.urls.preview_320} 320w, ${it.urls.preview_640} 640w, ${it.urls.preview_1280} 1280w`
-              : undefined
-          return (
-            <article key={it.id} className="timeline-card" data-testid="timeline-item">
-              {thumb ? (
-                <img
-                  src={thumb}
-                  srcSet={srcSet}
-                  sizes="(max-width: 390px) 90vw, 280px"
-                  alt=""
-                  className="timeline-thumb"
-                  loading="lazy"
-                  data-testid="timeline-thumb"
-                />
-              ) : (
-                <div className="timeline-thumb placeholder" />
-              )}
-              <div className="timeline-meta">
-                <span className="note">
-                  {it.kind}
-                  {it.width && it.height ? ` ${it.width}×${it.height}` : ''}
-                </span>
-                {onTrash ? (
-                  <button
-                    type="button"
-                    className="btn sm danger"
-                    data-testid={`trash-item-${it.id}`}
-                    onClick={() => onTrash(it.id)}
-                  >
-                    В корзину
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          )
-        })}
+    <div className="layout" data-testid="timeline">
+      <div className="tl">
+        {processing.length > 0 ? (
+          <ul className="processing-list" data-testid="media-processing-list">
+            {processing.map((p) => (
+              <li key={p.id} data-testid={p.state === 'failed' ? 'media-error' : 'media-processing'}>
+                {p.kind === 'video' ? 'Видео' : 'Фото'} —{' '}
+                {p.state === 'failed' ? `ошибка: ${p.error ?? 'обработка'}` : 'обрабатывается…'}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {items.length === 0 && processing.length === 0 ? (
+          <p className="note" data-testid="timeline-empty">
+            Лента пуста.
+          </p>
+        ) : null}
+        {grouped.map((block) => (
+          <section key={block.month} data-month={block.month} id={`month-${block.month}`}>
+            <h2 className="month">{monthTitle(block.month)}</h2>
+            {block.days.map((day) => (
+              <DaySection key={day.date} date={day.date} items={day.items} onTrash={onTrash} />
+            ))}
+          </section>
+        ))}
       </div>
-    </section>
+      {buckets.length > 0 && onScrubJump ? (
+        <TimelineScrub buckets={buckets} activeMonth={activeMonth} onJump={onScrubJump} />
+      ) : buckets.length > 0 ? (
+        <TimelineScrub buckets={buckets} activeMonth={activeMonth} onJump={() => undefined} />
+      ) : null}
+    </div>
+  )
+}
+
+function DaySection({
+  date,
+  items,
+  onTrash,
+}: {
+  date: string
+  items: TimelineLike[]
+  onTrash?: (id: string) => void
+}) {
+  return (
+    <div id={`day-${date}`}>
+      <h2>
+        {dayHeading(date)} <small>{dayStats(items)}</small>
+      </h2>
+      <div className="jg">
+        {items.map((it) => (
+          <TimelineTile key={it.id} item={it} onTrash={onTrash} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TimelineTile({ item, onTrash }: { item: TimelineLike; onTrash?: (id: string) => void }) {
+  const thumb = item.urls?.preview_640 ?? item.urls?.preview_1280 ?? item.urls?.poster ?? item.urls?.master
+  const grow = tileFlexGrow(item.width, item.height)
+  const aspect = item.width && item.height ? item.width / item.height : 4 / 3
+  const dur = formatDuration(item.duration_ms)
+  return (
+    <article
+      className="t timeline-card"
+      style={{ width: `calc(var(--rh) * ${aspect})`, flexGrow: grow }}
+      data-testid="timeline-item"
+    >
+      <Link to={`/view/${item.id}`} data-testid={`open-viewer-${item.id}`} aria-label="Открыть">
+        {thumb ? (
+          <img
+            src={thumb}
+            alt=""
+            className="timeline-thumb"
+            loading="lazy"
+            data-testid="timeline-thumb"
+          />
+        ) : (
+          <div className="timeline-thumb placeholder" />
+        )}
+        {dur ? <span className="dur">{dur}</span> : null}
+      </Link>
+      {onTrash ? (
+        <div className="timeline-meta">
+          <button
+            type="button"
+            className="btn sm danger"
+            data-testid={`trash-item-${item.id}`}
+            onClick={() => onTrash(item.id)}
+          >
+            В корзину
+          </button>
+        </div>
+      ) : null}
+    </article>
   )
 }

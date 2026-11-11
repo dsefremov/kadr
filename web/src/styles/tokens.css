@@ -17,7 +17,17 @@
   --display: 'Unbounded', 'Onest', sans-serif;
   --r: 14px;
   --rh: 210px;
+  --gap: 4px;
   --shadow: 0 18px 50px rgba(26, 22, 19, 0.18);
+  --warn: #e9a23b;
+  --warn-soft: #fbf0d8;
+  --err-soft: #fadcd8;
+  --mono: ui-monospace, 'JetBrains Mono', monospace;
+  --night: #0e0d0c;
+  --night-2: #1a1816;
+  --night-3: #2e2925;
+  --night-ink: #f2ece2;
+  --night-ink-2: #b8aea3;
 }
 
 @media (max-width: 600px) {

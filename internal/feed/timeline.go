@@ -100,6 +100,10 @@ func TimelineForFeed(ctx context.Context, db *sql.DB, feedPublicID string, curso
 	return &TimelinePage{Items: items, Cursor: next}, nil
 }
 
+func BuildURLsForKind(pub, kind string) map[string]string {
+	return buildURLs(pub, kind)
+}
+
 func buildURLs(pub, kind string) map[string]string {
 	ph := timelineProfileHash
 	if kind == "video" {
