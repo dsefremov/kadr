@@ -40,7 +40,8 @@ func TimelineForFeed(ctx context.Context, db *sql.DB, feedPublicID string, curso
 	}
 	args := []any{feedDBID}
 	q := `
-		SELECT m.id, m.public_id, m.kind, m.width, m.height, m.duration_ms, m.taken_sort, m.taken_date
+		SELECT m.id, m.public_id, m.kind, m.width, m.height, m.duration_ms, m.taken_sort,
+			DATE_FORMAT(m.taken_date, '%Y-%m-%d') AS taken_date
 		FROM media m
 		WHERE m.feed_id = ? AND m.state = 'ready' AND m.trashed_at IS NULL`
 	if cursor != "" {

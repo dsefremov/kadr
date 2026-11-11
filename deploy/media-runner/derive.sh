@@ -65,7 +65,10 @@ finalize_metrics() {
 }
 
 dims() {
-  vipsheader -f width -f height "$1" 2>/dev/null | tr '\n' ' '
+  # vipsheader accepts only one -f at a time; multiple -f keeps the last field.
+  w="$(vipsheader -f width "$1" 2>/dev/null || echo 0)"
+  h="$(vipsheader -f height "$1" 2>/dev/null || echo 0)"
+  echo "$w $h"
 }
 
 sha256_file() {

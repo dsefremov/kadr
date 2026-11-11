@@ -20,6 +20,8 @@ cp .env.example .env
 docker compose --profile dev up --build
 ```
 
+`data-init` chowns the `/data` volume to uid `10001` (api/worker). Without that, uploads return `500 {"error":"server error"}`.
+
 - App (proxy): http://127.0.0.1:8088  
 - API health: http://127.0.0.1:8088/api/health  
 - Mailpit UI (dev profile): http://127.0.0.1:8025  
