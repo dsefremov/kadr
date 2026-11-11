@@ -643,6 +643,25 @@ a {
 .side dd {
   margin: 0;
 }
+.side-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.side .btn {
+  background: var(--night-3);
+  border-color: var(--night-3);
+  color: var(--night-ink);
+}
+.side .btn.ghost {
+  background: transparent;
+  border-color: var(--night-ink-2);
+  color: var(--night-ink);
+}
+.side .btn:hover {
+  filter: brightness(1.12);
+}
 .scrim {
   position: fixed;
   inset: 0;
