@@ -102,13 +102,14 @@ derive_photo() {
     src="$flat"
   fi
 
-  vips thumbnail "$src" "$WORK/thumb.v" 3200 --size=both --no-rotate
+  # Default thumbnail applies EXIF Orientation to pixels; [strip] drops the tag after.
+  vips thumbnail "$src" "$WORK/thumb.v" 3200 --size=both
   vips copy "$WORK/thumb.v" "$OUT_DIR/master.jpg[Q=85,strip]"
-  vips thumbnail "$src" "$WORK/p320.v" 320 --size=both --no-rotate
+  vips thumbnail "$src" "$WORK/p320.v" 320 --size=both
   vips copy "$WORK/p320.v" "$OUT_DIR/preview-320.webp[Q=80,strip]"
-  vips thumbnail "$src" "$WORK/p640.v" 640 --size=both --no-rotate
+  vips thumbnail "$src" "$WORK/p640.v" 640 --size=both
   vips copy "$WORK/p640.v" "$OUT_DIR/preview-640.webp[Q=80,strip]"
-  vips thumbnail "$src" "$WORK/p1280.v" 1280 --size=both --no-rotate
+  vips thumbnail "$src" "$WORK/p1280.v" 1280 --size=both
   vips copy "$WORK/p1280.v" "$OUT_DIR/preview-1280.webp[Q=80,strip]"
 
   dim_line="$(dims "$OUT_DIR/master.jpg")"
@@ -164,7 +165,7 @@ derive_video() {
 
   ffmpeg -nostdin -y -threads 1 -ss 1 -i "$OUT_DIR/video.mp4" -vframes 1 \
     "$WORK/poster.png" 2>/dev/null || ffmpeg -nostdin -y -i "$OUT_DIR/video.mp4" -vframes 1 "$WORK/poster.png"
-  vips thumbnail "$WORK/poster.png" "$WORK/poster.v" 1280 --size=both --no-rotate
+  vips thumbnail "$WORK/poster.png" "$WORK/poster.v" 1280 --size=both
   vips copy "$WORK/poster.v" "$OUT_DIR/poster.webp[Q=80,strip]"
 
   vw=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$OUT_DIR/video.mp4")
