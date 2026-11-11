@@ -1,6 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Shell } from '../components/Shell'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { AppShell } from '../components/AppShell'
+import { createTusUpload, type TusUploadControl } from '../lib/tusUpload'
+
+type Me = {
+  email_verified: boolean
+  quota_limit?: number
+  quota_used?: number
+  quota_trash?: number
+  quota_reserved?: number
+  quota_status?: string
+}
 
 type TrashRow = {
   id: string
@@ -12,9 +22,13 @@ type TrashRow = {
 }
 
 export function TrashPage() {
+  const navigate = useNavigate()
+  const [me, setMe] = useState<Me | null>(null)
   const [items, setItems] = useState<TrashRow[]>([])
   const [msg, setMsg] = useState('')
   const [denied, setDenied] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const activeRef = useRef<TusUploadControl | null>(null)
 
   const load = useCallback(() => {
     fetch('/api/me/trash', { credentials: 'include' })
@@ -23,10 +37,18 @@ export function TrashPage() {
           setDenied(true)
           return { items: [] }
         }
+        setDenied(false)
         return r.json()
       })
       .then((data) => setItems((data.items ?? []) as TrashRow[]))
       .catch(() => setMsg('Не удалось загрузить корзину'))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/me', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setMe(d))
+      .catch(() => undefined)
   }, [])
 
   useEffect(() => {
@@ -39,6 +61,13 @@ export function TrashPage() {
     if (res.ok) {
       load()
       setMsg('Элемент восстановлен в ленту.')
+      // refresh quota after restore
+      fetch('/api/me', { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d) setMe(d)
+        })
+        .catch(() => undefined)
     } else if (res.status === 403) {
       setMsg('Недостаточно места в квоте для восстановления.')
     } else {
@@ -52,6 +81,12 @@ export function TrashPage() {
     if (res.ok) {
       load()
       setMsg('Элемент удалён навсегда.')
+      fetch('/api/me', { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d) setMe(d)
+        })
+        .catch(() => undefined)
     } else {
       setMsg('Не удалось удалить.')
     }
@@ -63,13 +98,70 @@ export function TrashPage() {
     if (res.ok) {
       load()
       setMsg('Корзина очищена.')
+      fetch('/api/me', { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d) setMe(d)
+        })
+        .catch(() => undefined)
     } else {
       setMsg('Не удалось очистить корзину.')
     }
   }
 
+  async function onFile(file: File) {
+    const kind = file.type.startsWith('video/') ? 'video' : 'photo'
+    if (activeRef.current) activeRef.current.abort(false)
+    const control = createTusUpload(file, kind, {})
+    activeRef.current = control
+    try {
+      await control.promise
+      navigate('/')
+    } finally {
+      activeRef.current = null
+    }
+  }
+
+  const quota =
+    me?.quota_limit != null
+      ? {
+          limit: me.quota_limit,
+          used: me.quota_used ?? 0,
+          trash: me.quota_trash ?? 0,
+          reserved: me.quota_reserved ?? 0,
+          status: me.quota_status,
+        }
+      : null
+
+  if (denied || (me && !me.email_verified)) {
+    return (
+      <AppShell>
+        <div className="feedhead">
+          <div>
+            <h1>Корзина</h1>
+          </div>
+        </div>
+        <p className="note">
+          <Link to="/login">Войдите</Link>, чтобы открыть корзину.
+        </p>
+      </AppShell>
+    )
+  }
+
   return (
-    <Shell>
+    <AppShell quota={quota} onUpload={() => inputRef.current?.click()}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,video/*"
+        style={{ display: 'none' }}
+        data-testid="trash-file-input"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void onFile(f)
+          e.target.value = ''
+        }}
+      />
       <div className="feedhead">
         <div>
           <h1>Корзина</h1>
@@ -79,12 +171,7 @@ export function TrashPage() {
           К ленте
         </Link>
       </div>
-      {denied ? (
-        <p className="note">
-          <Link to="/login">Войдите</Link>, чтобы открыть корзину.
-        </p>
-      ) : null}
-      {!denied && items.length > 0 ? (
+      {items.length > 0 ? (
         <button type="button" className="btn danger" data-testid="empty-trash" onClick={() => void emptyTrash()}>
           Очистить корзину
         </button>
@@ -94,7 +181,7 @@ export function TrashPage() {
           {msg}
         </p>
       ) : null}
-      {!denied && items.length === 0 ? (
+      {items.length === 0 ? (
         <p className="note" data-testid="trash-empty">
           Корзина пуста.
         </p>
@@ -130,6 +217,6 @@ export function TrashPage() {
           </li>
         ))}
       </ul>
-    </Shell>
+    </AppShell>
   )
 }

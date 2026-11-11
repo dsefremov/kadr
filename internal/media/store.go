@@ -56,7 +56,8 @@ func HashFile(path string) ([32]byte, error) {
 	return sum, nil
 }
 
-func CreateProcessing(ctx context.Context, db *sql.DB, ownerID, uploadID int64, kind string, sourceBytes uint64, dedup [32]byte, incomingKey string) (int64, string, error) {
+func CreateProcessing(ctx context.Context, db *sql.DB, ownerID, uploadID int64, kind string, sourceBytes uint64, dedup [32]byte, incomingKey string,
+	takenSort time.Time, takenDate, srcKind string) (int64, string, error) {
 	var feedID int64
 	if err := db.QueryRowContext(ctx, `SELECT id FROM feeds WHERE owner_id = ?`, ownerID).Scan(&feedID); err != nil {
 		return 0, "", err
@@ -65,8 +66,15 @@ func CreateProcessing(ctx context.Context, db *sql.DB, ownerID, uploadID int64, 
 	if err != nil {
 		return 0, "", err
 	}
-	now := time.Now().UTC()
-	takenDate := now.Format("2006-01-02")
+	if takenSort.IsZero() {
+		takenSort = time.Now().UTC()
+	}
+	if takenDate == "" {
+		takenDate = takenSort.Format("2006-01-02")
+	}
+	if srcKind == "" {
+		srcKind = "upload"
+	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, "", err
@@ -75,8 +83,8 @@ func CreateProcessing(ctx context.Context, db *sql.DB, ownerID, uploadID int64, 
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO media (public_id, feed_id, owner_id, upload_id, kind, dedup_sha256, source_bytes,
 			state, taken_sort, taken_date, src_kind)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'processing', ?, ?, 'upload')`,
-		pubID, feedID, ownerID, uploadID, kind, dedup[:], sourceBytes, now, takenDate)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 'processing', ?, ?, ?)`,
+		pubID, feedID, ownerID, uploadID, kind, dedup[:], sourceBytes, takenSort, takenDate, srcKind)
 	if err != nil {
 		if isDupKey(err) {
 			return 0, "", ErrDuplicate
@@ -143,6 +151,20 @@ func nullDuration(ms uint64) interface{} {
 		return nil
 	}
 	return ms
+}
+
+// ApplyTaken updates timeline date after better metadata is known (e.g. video creation_time).
+func ApplyTaken(ctx context.Context, db *sql.DB, mediaID int64, takenSort time.Time, takenDate, srcKind string) error {
+	if takenSort.IsZero() || takenDate == "" {
+		return nil
+	}
+	if srcKind == "" {
+		srcKind = "upload"
+	}
+	_, err := db.ExecContext(ctx, `
+		UPDATE media SET taken_sort = ?, taken_date = ?, src_kind = ? WHERE id = ?`,
+		takenSort, takenDate, srcKind, mediaID)
+	return err
 }
 
 func CommitReady(ctx context.Context, db *sql.DB, mediaID, ownerID, uploadLen, stored uint64,

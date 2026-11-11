@@ -37,7 +37,8 @@ func DetailByPublicID(ctx context.Context, db *sql.DB, publicID string) (*Row, s
 	if err != nil {
 		return nil, "", err
 	}
-	err = db.QueryRowContext(ctx, `SELECT taken_date FROM media WHERE public_id = ?`, publicID).Scan(&takenDate)
+	// DATE_FORMAT keeps YYYY-MM-DD even with parseTime=true (string Scan otherwise becomes RFC3339).
+	err = db.QueryRowContext(ctx, `SELECT DATE_FORMAT(taken_date, '%Y-%m-%d') FROM media WHERE public_id = ?`, publicID).Scan(&takenDate)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}

@@ -117,17 +117,32 @@ function TimelineTile({ item, onTrash }: { item: TimelineLike; onTrash?: (id: st
         {dur ? <span className="dur">{dur}</span> : null}
       </Link>
       {onTrash ? (
-        <div className="timeline-meta">
-          <button
-            type="button"
-            className="btn sm danger"
-            data-testid={`trash-item-${item.id}`}
-            onClick={() => onTrash(item.id)}
-          >
-            В корзину
-          </button>
-        </div>
+        <button
+          type="button"
+          className="trash-fab"
+          data-testid={`trash-item-${item.id}`}
+          aria-label="В корзину"
+          title="В корзину"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onTrash(item.id)
+          }}
+        >
+          <TrashIcon />
+        </button>
       ) : null}
     </article>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M6 2h4l.5 1H14v1.5H2V3h3.5L6 2zm1 3.5h1.5V13H7V5.5zm3 0H11.5V13H10V5.5zM4.5 5.5H6V13H4.5V5.5zM3 14.5h10V4H3v10.5z"
+      />
+    </svg>
   )
 }

@@ -72,7 +72,10 @@ export function UploadsPage() {
   }, [me?.email_verified, refresh])
 
   async function cancelUpload(id: string) {
-    await fetch(`/api/uploads/${id}`, { method: 'DELETE', credentials: 'include' })
+    const res = await fetch(`/api/uploads/${id}`, { method: 'DELETE', credentials: 'include' })
+    if (res.ok || res.status === 404) {
+      setUploads((prev) => prev.filter((u) => u.id !== id))
+    }
     refresh()
   }
 

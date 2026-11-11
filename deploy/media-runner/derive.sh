@@ -65,7 +65,10 @@ finalize_metrics() {
 }
 
 dims() {
-  vipsheader -f width -f height "$1" 2>/dev/null | tr '\n' ' '
+  # vipsheader accepts only one -f at a time; multiple -f keeps the last field.
+  w="$(vipsheader -f width "$1" 2>/dev/null || echo 0)"
+  h="$(vipsheader -f height "$1" 2>/dev/null || echo 0)"
+  echo "$w $h"
 }
 
 sha256_file() {
@@ -99,13 +102,14 @@ derive_photo() {
     src="$flat"
   fi
 
-  vips thumbnail "$src" "$WORK/thumb.v" 3200 --size=both --no-rotate
+  # Default thumbnail applies EXIF Orientation to pixels; [strip] drops the tag after.
+  vips thumbnail "$src" "$WORK/thumb.v" 3200 --size=both
   vips copy "$WORK/thumb.v" "$OUT_DIR/master.jpg[Q=85,strip]"
-  vips thumbnail "$src" "$WORK/p320.v" 320 --size=both --no-rotate
+  vips thumbnail "$src" "$WORK/p320.v" 320 --size=both
   vips copy "$WORK/p320.v" "$OUT_DIR/preview-320.webp[Q=80,strip]"
-  vips thumbnail "$src" "$WORK/p640.v" 640 --size=both --no-rotate
+  vips thumbnail "$src" "$WORK/p640.v" 640 --size=both
   vips copy "$WORK/p640.v" "$OUT_DIR/preview-640.webp[Q=80,strip]"
-  vips thumbnail "$src" "$WORK/p1280.v" 1280 --size=both --no-rotate
+  vips thumbnail "$src" "$WORK/p1280.v" 1280 --size=both
   vips copy "$WORK/p1280.v" "$OUT_DIR/preview-1280.webp[Q=80,strip]"
 
   dim_line="$(dims "$OUT_DIR/master.jpg")"
@@ -138,6 +142,19 @@ derive_photo() {
     >"$OUT_DIR/result.json"
 }
 
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+video_taken_iso() {
+  src="$1"
+  t="$(ffprobe -v error -show_entries format_tags=creation_time -of default=noprint_wrappers=1:nokey=1 "$src" 2>/dev/null | tr -d '\r' | head -1)"
+  if [ -z "$t" ]; then
+    t="$(ffprobe -v error -select_streams v:0 -show_entries stream_tags=creation_time -of default=noprint_wrappers=1:nokey=1 "$src" 2>/dev/null | tr -d '\r' | head -1)"
+  fi
+  printf '%s' "$t"
+}
+
 derive_video() {
   src="$1"
   dur=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$src" 2>/dev/null || echo 0)
@@ -145,6 +162,8 @@ derive_video() {
   if [ "$dur_ms" -gt 3600000 ]; then
     fail video_too_long "Видео длиннее 60 минут"
   fi
+
+  taken_iso="$(video_taken_iso "$src")"
 
   transfer=$(ffprobe -v error -select_streams v:0 -show_entries stream=color_transfer -of csv=p=0 "$src" 2>/dev/null | tr -d '\r')
   vf="scale='min(1920,iw)':-2:force_original_aspect_ratio=decrease,setsar=1"
@@ -161,7 +180,7 @@ derive_video() {
 
   ffmpeg -nostdin -y -threads 1 -ss 1 -i "$OUT_DIR/video.mp4" -vframes 1 \
     "$WORK/poster.png" 2>/dev/null || ffmpeg -nostdin -y -i "$OUT_DIR/video.mp4" -vframes 1 "$WORK/poster.png"
-  vips thumbnail "$WORK/poster.png" "$WORK/poster.v" 1280 --size=both --no-rotate
+  vips thumbnail "$WORK/poster.png" "$WORK/poster.v" 1280 --size=both
   vips copy "$WORK/poster.v" "$OUT_DIR/poster.webp[Q=80,strip]"
 
   vw=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$OUT_DIR/video.mp4")
@@ -175,8 +194,12 @@ derive_video() {
   ph="${ph:-0}"
 
   finalize_metrics
-  printf '{"ok":true,"width":%s,"height":%s,"duration_ms":%s,"variants":[{"variant":"video","file":"video.mp4","mime":"video/mp4","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"poster","file":"poster.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
-    "$vw" "$vh" "$dur_ms" "$vb" "$vw" "$vh" "$(sha256_file "$OUT_DIR/video.mp4")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/poster.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
+  taken_json=""
+  if [ -n "$taken_iso" ]; then
+    taken_json=",\"taken_iso\":\"$(json_escape "$taken_iso")\""
+  fi
+  printf '{"ok":true,"width":%s,"height":%s,"duration_ms":%s%s,"variants":[{"variant":"video","file":"video.mp4","mime":"video/mp4","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"},{"variant":"poster","file":"poster.webp","mime":"image/webp","bytes":%s,"width":%s,"height":%s,"sha256_hex":"%s"}],"metrics":{"wall_seconds":%s,"peak_rss_kb":%s}}\n' \
+    "$vw" "$vh" "$dur_ms" "$taken_json" "$vb" "$vw" "$vh" "$(sha256_file "$OUT_DIR/video.mp4")" "$pb" "$pw" "$ph" "$(sha256_file "$OUT_DIR/poster.webp")" "$DERIVE_WALL" "$DERIVE_PEAK_RSS_KB" >"$OUT_DIR/result.json"
 }
 
 case "$KIND" in
