@@ -77,11 +77,16 @@ export function HomePage() {
       .catch(() => undefined)
   }, [me?.email_verified])
 
+  const applyTimelinePayload = useCallback((payload: { items?: unknown }) => {
+    const next = Array.isArray(payload.items) ? (payload.items as typeof timelineItems) : []
+    setTimelineItems(next)
+  }, [])
+
   const refreshTimeline = useCallback(() => {
     if (!me?.feed_id) return
     fetch(`/api/feeds/${me.feed_id}/timeline?limit=100`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((t) => setTimelineItems((t.items ?? []) as typeof timelineItems))
+      .then((t) => applyTimelinePayload(t))
       .catch(() => undefined)
     fetch(`/api/feeds/${me.feed_id}/timeline/buckets`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { buckets: [] }))
@@ -92,7 +97,27 @@ export function HomePage() {
       .then((r) => (r.ok ? r.json() : { media: [] }))
       .then((data) => setMediaProcessing((data.media ?? []) as typeof mediaProcessing))
       .catch(() => undefined)
-  }, [me?.feed_id])
+  }, [me?.feed_id, applyTimelinePayload])
+
+  const pollTimelineForFeed = useCallback(
+    async (feedId: string) => {
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const res = await fetch(`/api/feeds/${feedId}/timeline?limit=20`, { credentials: 'include' })
+        if (res.ok) {
+          const t = (await res.json()) as { items?: unknown }
+          if (Array.isArray(t.items) && t.items.length > 0) {
+            applyTimelinePayload(t)
+            setUploadMsg((msg) =>
+              msg.includes('в ленте') ? msg : msg.replace('обработка на сервере…', 'готово в ленте'),
+            )
+            return
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+      }
+    },
+    [applyTimelinePayload],
+  )
 
   useEffect(() => {
     fetch('/api/me', { credentials: 'include' })
@@ -179,6 +204,14 @@ export function HomePage() {
       activeRef.current = null
       loadPending()
       refreshTimeline()
+      void (async () => {
+        let feedId = me?.feed_id
+        if (!feedId) {
+          const meNow = await fetch('/api/me', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null))
+          feedId = meNow?.feed_id as string | undefined
+        }
+        if (feedId) await pollTimelineForFeed(feedId)
+      })()
     } catch (e) {
       if (e instanceof QuotaExceededError) {
         setUploadPct(null)
@@ -404,7 +437,7 @@ export function HomePage() {
               </p>
               <Timeline
                 items={timelineItems}
-                processing={[]}
+                processing={mediaProcessing}
                 buckets={buckets}
                 activeMonth={activeMonth}
                 onScrubJump={onScrubJump}

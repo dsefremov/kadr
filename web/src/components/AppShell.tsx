@@ -33,7 +33,7 @@ export function AppShell({ children, quota, onUpload }: Props) {
           <Link className={nav('/uploads')} to="/uploads" data-testid="nav-uploads">
             Загрузки
           </Link>
-          <Link className={nav('/trash')} to="/trash">
+          <Link className={nav('/trash')} to="/trash" data-testid="open-trash">
             Корзина
           </Link>
           <Link className={nav('/account')} to="/account">
@@ -65,7 +65,7 @@ export function AppShell({ children, quota, onUpload }: Props) {
           <span>▦</span>
           Лента
         </Link>
-        <Link className={nav('/trash')} to="/">
+        <Link className={nav('/trash')} to="/trash" data-testid="open-trash">
           <span>⌫</span>
           Корзина
         </Link>

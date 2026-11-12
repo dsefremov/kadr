@@ -31,6 +31,9 @@ export function Timeline({ items, processing, buckets = [], activeMonth, onTrash
 
   return (
     <div className="layout" data-testid="timeline">
+      <p className="note" data-testid="timeline-count">
+        Готово: {items.length}
+      </p>
       <div className="tl">
         {processing.length > 0 ? (
           <ul className="processing-list" data-testid="media-processing-list">
@@ -90,6 +93,14 @@ function DaySection({
 
 function TimelineTile({ item, onTrash }: { item: TimelineLike; onTrash?: (id: string) => void }) {
   const thumb = item.urls?.preview_640 ?? item.urls?.preview_1280 ?? item.urls?.poster ?? item.urls?.master
+  const srcset = [320, 640, 1280]
+    .map((w) => {
+      const key = `preview_${w}` as const
+      const url = item.urls?.[key]
+      return url ? `${url} ${w}w` : null
+    })
+    .filter(Boolean)
+    .join(', ')
   const grow = tileFlexGrow(item.width, item.height)
   const aspect = item.width && item.height ? item.width / item.height : 4 / 3
   const dur = formatDuration(item.duration_ms)
@@ -103,6 +114,8 @@ function TimelineTile({ item, onTrash }: { item: TimelineLike; onTrash?: (id: st
         {thumb ? (
           <img
             src={thumb}
+            srcSet={srcset || undefined}
+            sizes="(max-width: 600px) 50vw, 320px"
             alt=""
             className="timeline-thumb"
             loading="lazy"

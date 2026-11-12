@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Local dev shim: ci-integration calls plain `docker`; route through docker-wrap on agents without group docker.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=scripts/docker-wrap.sh
+source "${ROOT}/scripts/docker-wrap.sh"
+docker_wrap "$@"
