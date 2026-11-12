@@ -84,7 +84,7 @@ KADR_KEEP_UP=1 sudo -E ./scripts/ci-integration.sh
 | `ci-media-pipeline.sh` | OK |
 | `ci-media-benchmarks.sh` | **Не завершён** (тот же HDR job; cap 768 MiB) |
 | `ci-timeline-smoke.sh` | OK (trash → **purge forever** → re-upload) |
-| Playwright stage 6 | **22/22** (proxy/nginx `:8088` или preview после smoke) |
+| Playwright + axe (66 specs, proxy **:8088**) | **локально** **66 passed / 0 failed / 0 skipped** (2026-11-11); `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088`, head см. финальный docs-коммит этого PR |
 | `measure-memory.sh` | api ~42 MiB, worker ~2 MiB idle (см. `/tmp/kadr-memory.txt`) |
 
 ## CI (PR → develop)

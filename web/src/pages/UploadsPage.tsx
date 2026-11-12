@@ -194,7 +194,7 @@ export function UploadsPage() {
         <div>
           {quota ? (
             <div className="panel">
-              <h3>Место</h3>
+              <h2 className="panel-title">Место</h2>
               <QuotaBar {...quota} />
               <p className="note" style={{ marginTop: 10 }}>
                 Загрузки в очереди заранее резервируют место.
